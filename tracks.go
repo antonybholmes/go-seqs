@@ -108,17 +108,15 @@ func (reader *TracksReader) ReadsUint8(location *dna.Location) (*BinCounts, erro
 
 	defer f.Close()
 
-	var magic uint32
-	binary.Read(f, binary.LittleEndian, &magic)
-	var binSizeBytes byte
-	binary.Read(f, binary.LittleEndian, &binSizeBytes)
+	//var magic uint32
+	//binary.Read(f, binary.LittleEndian, &magic)
 
 	f.Seek(9, 0)
 
 	var binCount uint32
 	binary.Read(f, binary.LittleEndian, &binCount)
 
-	log.Debug().Msgf("magic %d %d %d", magic, binSizeBytes, binCount)
+	log.Debug().Msgf("bins %d", binCount)
 
 	data := make([]uint8, bl)
 	f.Seek(int64(BINS_OFFSET_BYTES+bs), 0)
@@ -151,17 +149,10 @@ func (reader *TracksReader) ReadsUint16(location *dna.Location) (*BinCounts, err
 
 	defer f.Close()
 
-	var magic uint32
-	binary.Read(f, binary.LittleEndian, &magic)
-	var binSizeBytes byte
-	binary.Read(f, binary.LittleEndian, &binSizeBytes)
-
 	f.Seek(9, 0)
 
 	var binCount uint32
 	binary.Read(f, binary.LittleEndian, &binCount)
-
-	log.Debug().Msgf("magic %d %d %d", magic, binSizeBytes, binCount)
 
 	data := make([]uint16, bl)
 	f.Seek(int64(BINS_OFFSET_BYTES+bs), 0)
@@ -194,17 +185,10 @@ func (reader *TracksReader) ReadsUint32(location *dna.Location) (*BinCounts, err
 
 	defer f.Close()
 
-	var magic uint32
-	binary.Read(f, binary.LittleEndian, &magic)
-	var binSizeBytes byte
-	binary.Read(f, binary.LittleEndian, &binSizeBytes)
-
 	f.Seek(9, 0)
 
 	var binCount uint32
 	binary.Read(f, binary.LittleEndian, &binCount)
-
-	log.Debug().Msgf("magic %d %d %d", magic, binSizeBytes, binCount)
 
 	reads := make([]uint32, bl)
 	f.Seek(int64(BINS_OFFSET_BYTES+bs), 0)
