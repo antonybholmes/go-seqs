@@ -40,7 +40,7 @@ type Track struct {
 }
 
 type TracksDB struct {
-	cacheMap map[string][]Track
+	cacheMap map[string]map[string][]Track
 	dir      string
 }
 
@@ -49,9 +49,9 @@ func (tracksDb *TracksDB) Dir() string {
 }
 
 func NewTrackDB(dir string) *TracksDB {
-	cacheMap := make(map[string][]Track)
+	cacheMap := make(map[string]map[string][]Track)
 
-	files, err := os.ReadDir(dir)
+	platformFiles, err := os.ReadDir(dir)
 
 	log.Debug().Msgf("---- track db ----")
 
@@ -62,33 +62,53 @@ func NewTrackDB(dir string) *TracksDB {
 	log.Debug().Msgf("caching track databases in %s...", dir)
 
 	// Sort by name
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name() < files[j].Name()
+	sort.Slice(platformFiles, func(i, j int) bool {
+		return platformFiles[i].Name() < platformFiles[j].Name()
 	})
 
-	for _, genome := range files {
-		if genome.IsDir() {
+	for _, platform := range platformFiles {
+		if platform.IsDir() {
 
-			sampleFiles, err := os.ReadDir(filepath.Join(dir, genome.Name()))
+			cacheMap[platform.Name()] = make(map[string][]Track)
+
+			platformDir := filepath.Join(dir, platform.Name())
+
+			genomeFiles, err := os.ReadDir(platformDir)
 
 			if err != nil {
-				log.Fatal().Msgf("error opening %s", dir)
+				log.Fatal().Msgf("error opening %s", platformDir)
 			}
 
-			cacheMap[genome.Name()] = make([]Track, 0, 10)
-
-			// Sort by name
-			sort.Slice(sampleFiles, func(i, j int) bool {
-				return sampleFiles[i].Name() < sampleFiles[j].Name()
+			sort.Slice(genomeFiles, func(i, j int) bool {
+				return genomeFiles[i].Name() < genomeFiles[j].Name()
 			})
 
-			for _, sample := range sampleFiles {
-				if sample.IsDir() {
-					cacheMap[genome.Name()] = append(cacheMap[genome.Name()], Track{Genome: genome.Name(), Name: sample.Name()})
+			for _, genome := range genomeFiles {
+				if genome.IsDir() {
+
+					sampleDir := filepath.Join(dir, genome.Name())
+
+					sampleFiles, err := os.ReadDir(sampleDir)
+
+					if err != nil {
+						log.Fatal().Msgf("error opening %s", sampleDir)
+					}
+
+					cacheMap[platform.Name()][genome.Name()] = make([]Track, 0, 10)
+
+					// Sort by name
+					sort.Slice(sampleFiles, func(i, j int) bool {
+						return sampleFiles[i].Name() < sampleFiles[j].Name()
+					})
+
+					for _, sample := range sampleFiles {
+						if sample.IsDir() {
+							cacheMap[platform.Name()][genome.Name()] = append(cacheMap[platform.Name()][genome.Name()], Track{Genome: genome.Name(), Name: sample.Name()})
+						}
+					}
 				}
 			}
 		}
-
 	}
 
 	log.Debug().Msgf("---- end ----")
@@ -96,7 +116,7 @@ func NewTrackDB(dir string) *TracksDB {
 	return &TracksDB{dir: dir, cacheMap: cacheMap}
 }
 
-func (tracksDb *TracksDB) Genomes() []string {
+func (tracksDb *TracksDB) Platforms() []string {
 	keys := make([]string, 0, len(tracksDb.cacheMap))
 
 	for k := range tracksDb.cacheMap {
@@ -107,13 +127,36 @@ func (tracksDb *TracksDB) Genomes() []string {
 	return keys
 }
 
-func (tracksDb *TracksDB) Tracks(genome string) ([]Track, error) {
-	tracks, ok := tracksDb.cacheMap[genome]
+func (tracksDb *TracksDB) Genomes(platform string) ([]string, error) {
+	genomes, ok := tracksDb.cacheMap[platform]
 
 	if ok {
-		return tracks, nil
+		keys := make([]string, 0, len(genomes))
+
+		for k := range genomes {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		return keys, nil
 	} else {
-		return nil, fmt.Errorf("genome %s not found", genome)
+		return nil, fmt.Errorf("platform %s not found", platform)
+	}
+}
+
+func (tracksDb *TracksDB) Tracks(platform string, genome string) ([]Track, error) {
+	genomes, ok := tracksDb.cacheMap[platform]
+
+	if ok {
+		tracks, ok := genomes[genome]
+
+		if ok {
+			return tracks, nil
+		} else {
+			return nil, fmt.Errorf("genome %s not found", genome)
+		}
+	} else {
+		return nil, fmt.Errorf("platform %s not found", platform)
 	}
 }
 
