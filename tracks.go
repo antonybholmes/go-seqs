@@ -21,7 +21,7 @@ const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
 const BIN_SQL = `SELECT id, chr, bin, read
 	FROM track
- 	WHERE chr = ?1 AND bin >= ?2 AND bin <= ?2
+ 	WHERE chr = ?1 AND bin >= ?2 AND bin <= ?3
 	ORDER BY chr, bin`
 
 type BinCounts struct {
