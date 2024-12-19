@@ -14,7 +14,9 @@ func TestWithin(t *testing.T) {
 		t.Fatalf(`err %s`, err)
 	}
 
-	reader := NewTracksReader("/home/antony/development/data/modules/tracks/chip_seq/hg19/CB4_BCL6_RK040/", "max", 100, "hg19")
+	track := Track{Platform: "ChIP-seq", Genome: "hg19", Name: "CB4_BCL6_RK040"}
+
+	reader := NewTrackReader("/home/antony/development/data/modules/tracks/", track, 100, "max")
 
 	binCounts, err := reader.BinCounts(location)
 
