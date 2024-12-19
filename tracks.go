@@ -2,7 +2,7 @@ package tracks
 
 import (
 	"bufio"
-	"encoding/binary"
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,6 +18,11 @@ const BIN_SIZE_OFFSET_BYTES = MAGIC_NUMBER_OFFSET_BYTES + 4
 const BIN_WIDTH_OFFSET_BYTES = BIN_SIZE_OFFSET_BYTES + 4
 const N_BINS_OFFSET_BYTES = BIN_WIDTH_OFFSET_BYTES + 4
 const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
+
+const BIN_SQL = `SELECT id, chr, bin, read
+	FROM track
+ 	WHERE chr = ?1 AND bin >= ?2 AND bin <= ?2
+	ORDER BY chr, bin`
 
 type BinCounts struct {
 	Location *dna.Location `json:"location"`
@@ -48,6 +53,7 @@ func NewTracksReader(dir string, mode string, binWidth uint, genome string) *Tra
 	scanner.Scan()
 
 	count, err := strconv.Atoi(scanner.Text())
+
 	if err != nil {
 		log.Fatal().Msgf("could not count reads")
 	}
@@ -60,141 +66,178 @@ func NewTracksReader(dir string, mode string, binWidth uint, genome string) *Tra
 }
 
 func (reader *TracksReader) getPath(location *dna.Location) string {
-	return filepath.Join(reader.Dir, fmt.Sprintf("%s_bw%d_c%s_%s.trackbin", strings.ToLower(location.Chr), reader.BinWidth, reader.Mode, reader.Genome))
+	return filepath.Join(reader.Dir, fmt.Sprintf("%s_bw%d_c%s_%s.db", strings.ToLower(location.Chr), reader.BinWidth, reader.Mode, reader.Genome))
 
 }
 
-func (reader *TracksReader) Reads1Byte(location *dna.Location) (*BinCounts, error) {
-	file := reader.getPath(location)
+func (reader *TracksReader) Reads(location *dna.Location) (*BinCounts, error) {
 
-	f, err := os.Open(file)
+	path := reader.getPath(location)
+
+	db, err := sql.Open("sqlite3", path)
 
 	if err != nil {
 		return nil, err
 	}
 
-	defer f.Close()
+	defer db.Close()
 
-	var magic uint32
-	binary.Read(f, binary.LittleEndian, &magic)
-	var binSizeBytes byte
-	binary.Read(f, binary.LittleEndian, &binSizeBytes)
-
-	switch binSizeBytes {
-	case 1:
-		return reader.ReadsUint8(location)
-	case 2:
-		return reader.ReadsUint16(location)
-	default:
-		return reader.ReadsUint32(location)
-	}
-}
-
-func (reader *TracksReader) ReadsUint8(location *dna.Location) (*BinCounts, error) {
 	s := location.Start - 1
 	e := location.End - 1
 
-	bs := s / reader.BinWidth
-	be := e / reader.BinWidth
-	bl := be - bs + 1
+	startBin := s / reader.BinWidth
+	endBin := e / reader.BinWidth
 
-	file := reader.getPath(location)
-
-	f, err := os.Open(file)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer f.Close()
-
-	//var magic uint32
-	//binary.Read(f, binary.LittleEndian, &magic)
-
-	f.Seek(9, 0)
-
-	offset := BINS_OFFSET_BYTES + bs
-	log.Debug().Msgf("offset %d %d", offset, bs)
-
-	data := make([]uint8, bl)
-	f.Seek(int64(offset), 0)
-	binary.Read(f, binary.LittleEndian, &data)
-
-	reads := make([]uint32, bl)
-
-	for i, c := range data {
-		reads[i] = uint32(c)
-	}
-
-	return reader.Results(location, bs, reads)
-}
-
-func (reader *TracksReader) ReadsUint16(location *dna.Location) (*BinCounts, error) {
-	s := location.Start - 1
-	e := location.End - 1
-
-	bs := s / reader.BinWidth
-	be := e / reader.BinWidth
-	bl := be - bs + 1
-
-	file := reader.getPath(location)
-
-	f, err := os.Open(file)
+	rows, err := db.Query(
+		location.Chr,
+		startBin,
+		endBin)
 
 	if err != nil {
 		return nil, err
 	}
 
-	defer f.Close()
+	var bin uint32
+	var count uint32
+	reads := make([]uint32, endBin-startBin+1)
 
-	f.Seek(9, 0)
+	for rows.Next() {
+		err := rows.Scan(&bin, &count)
 
-	data := make([]uint16, bl)
-	f.Seek(int64(BINS_OFFSET_BYTES+bs*2), 0)
-	binary.Read(f, binary.LittleEndian, &data)
+		if err != nil {
+			return nil, err //fmt.Errorf("there was an error with the database records")
+		}
 
-	reads := make([]uint32, bl)
-
-	for i, c := range data {
-		reads[i] = uint32(c)
+		reads[bin] = count
 	}
-
-	return reader.Results(location, bs, reads)
-}
-
-func (reader *TracksReader) ReadsUint32(location *dna.Location) (*BinCounts, error) {
-	s := location.Start - 1
-	e := location.End - 1
-
-	bs := s / reader.BinWidth
-	be := e / reader.BinWidth
-	bl := be - bs + 1
-
-	file := reader.getPath(location)
-
-	f, err := os.Open(file)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer f.Close()
-
-	f.Seek(9, 0)
-
-	reads := make([]uint32, bl)
-	f.Seek(int64(BINS_OFFSET_BYTES+bs*4), 0)
-	binary.Read(f, binary.LittleEndian, &reads)
-
-	return reader.Results(location, bs, reads)
-}
-
-func (reader *TracksReader) Results(location *dna.Location, bs uint, reads []uint32) (*BinCounts, error) {
 
 	return &BinCounts{
 		Location: location,
-		Start:    bs*reader.BinWidth + 1,
+		Start:    startBin*reader.BinWidth + 1,
 		Reads:    reads,
 		ReadN:    reader.ReadN,
 	}, nil
+
+	// var magic uint32
+	// binary.Read(f, binary.LittleEndian, &magic)
+	// var binSizeBytes byte
+	// binary.Read(f, binary.LittleEndian, &binSizeBytes)
+
+	// switch binSizeBytes {
+	// case 1:
+	// 	return reader.ReadsUint8(location)
+	// case 2:
+	// 	return reader.ReadsUint16(location)
+	// default:
+	// 	return reader.ReadsUint32(location)
+	// }
 }
+
+// func (reader *TracksReader) ReadsUint8(location *dna.Location) (*BinCounts, error) {
+// 	s := location.Start - 1
+// 	e := location.End - 1
+
+// 	bs := s / reader.BinWidth
+// 	be := e / reader.BinWidth
+// 	bl := be - bs + 1
+
+// 	file := reader.getPath(location)
+
+// 	f, err := os.Open(file)
+
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	defer f.Close()
+
+// 	//var magic uint32
+// 	//binary.Read(f, binary.LittleEndian, &magic)
+
+// 	f.Seek(9, 0)
+
+// 	offset := BINS_OFFSET_BYTES + bs
+// 	log.Debug().Msgf("offset %d %d", offset, bs)
+
+// 	data := make([]uint8, bl)
+// 	f.Seek(int64(offset), 0)
+// 	binary.Read(f, binary.LittleEndian, &data)
+
+// 	reads := make([]uint32, bl)
+
+// 	for i, c := range data {
+// 		reads[i] = uint32(c)
+// 	}
+
+// 	return reader.Results(location, bs, reads)
+// }
+
+// func (reader *TracksReader) ReadsUint16(location *dna.Location) (*BinCounts, error) {
+// 	s := location.Start - 1
+// 	e := location.End - 1
+
+// 	bs := s / reader.BinWidth
+// 	be := e / reader.BinWidth
+// 	bl := be - bs + 1
+
+// 	file := reader.getPath(location)
+
+// 	f, err := os.Open(file)
+
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	defer f.Close()
+
+// 	f.Seek(9, 0)
+
+// 	data := make([]uint16, bl)
+// 	f.Seek(int64(BINS_OFFSET_BYTES+bs*2), 0)
+// 	binary.Read(f, binary.LittleEndian, &data)
+
+// 	reads := make([]uint32, bl)
+
+// 	for i, c := range data {
+// 		reads[i] = uint32(c)
+// 	}
+
+// 	return reader.Results(location, bs, reads)
+// }
+
+// func (reader *TracksReader) ReadsUint32(location *dna.Location) (*BinCounts, error) {
+// 	s := location.Start - 1
+// 	e := location.End - 1
+
+// 	bs := s / reader.BinWidth
+// 	be := e / reader.BinWidth
+// 	bl := be - bs + 1
+
+// 	file := reader.getPath(location)
+
+// 	f, err := os.Open(file)
+
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	defer f.Close()
+
+// 	f.Seek(9, 0)
+
+// 	reads := make([]uint32, bl)
+// 	f.Seek(int64(BINS_OFFSET_BYTES+bs*4), 0)
+// 	binary.Read(f, binary.LittleEndian, &reads)
+
+// 	return reader.Results(location, bs, reads)
+// }
+
+// func (reader *TracksReader) Results(location *dna.Location, bs uint, reads []uint32) (*BinCounts, error) {
+
+// 	return &BinCounts{
+// 		Location: location,
+// 		Start:    bs*reader.BinWidth + 1,
+// 		Reads:    reads,
+// 		ReadN:    reader.ReadN,
+// 	}, nil
+// }

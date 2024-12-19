@@ -16,7 +16,7 @@ func TestWithin(t *testing.T) {
 
 	reader := NewTracksReader("/home/antony/development/data/modules/tracks/chip_seq/hg19/CB4_BCL6_RK040/trackbin/", "max", 100, "hg19")
 
-	reads, err := reader.Reads1Byte(location)
+	reads, err := reader.Reads(location)
 
 	if err != nil {
 		t.Fatalf(`err %s`, err)
