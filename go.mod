@@ -10,7 +10,10 @@ replace github.com/antonybholmes/go-basemath => ../go-basemath
 
 require github.com/rs/zerolog v1.33.0
 
-require github.com/antonybholmes/go-basemath v0.0.0-20240825181410-a6174a39116c // indirect
+require (
+	github.com/antonybholmes/go-basemath v0.0.0-20240825181410-a6174a39116c // indirect
+	github.com/mattn/go-sqlite3 v1.14.24 // indirect
+)
 
 require (
 	github.com/antonybholmes/go-dna v0.0.0-20241007150544-1b58eb1162ce

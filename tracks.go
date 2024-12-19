@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/antonybholmes/go-dna"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
 )
 
@@ -19,10 +20,10 @@ const BIN_WIDTH_OFFSET_BYTES = BIN_SIZE_OFFSET_BYTES + 4
 const N_BINS_OFFSET_BYTES = BIN_WIDTH_OFFSET_BYTES + 4
 const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
-const BIN_SQL = `SELECT id, chr, bin, read
+const BIN_SQL = `SELECT bin, reads 
 	FROM track
- 	WHERE chr = ?1 AND bin >= ?2 AND bin <= ?3
-	ORDER BY chr, bin`
+ 	WHERE bin >= ?1 AND bin <= ?2
+	ORDER BY bin`
 
 type BinCounts struct {
 	Location *dna.Location `json:"location"`
@@ -88,8 +89,7 @@ func (reader *TracksReader) Reads(location *dna.Location) (*BinCounts, error) {
 	startBin := s / reader.BinWidth
 	endBin := e / reader.BinWidth
 
-	rows, err := db.Query(
-		location.Chr,
+	rows, err := db.Query(BIN_SQL,
 		startBin,
 		endBin)
 
@@ -100,7 +100,7 @@ func (reader *TracksReader) Reads(location *dna.Location) (*BinCounts, error) {
 	var bin uint32
 	var count uint32
 	reads := make([]uint32, endBin-startBin+1)
-
+	index := 0
 	for rows.Next() {
 		err := rows.Scan(&bin, &count)
 
@@ -108,7 +108,8 @@ func (reader *TracksReader) Reads(location *dna.Location) (*BinCounts, error) {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		reads[bin] = count
+		reads[index] = count
+		index++
 	}
 
 	return &BinCounts{
