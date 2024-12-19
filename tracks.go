@@ -27,7 +27,7 @@ const BIN_SQL = `SELECT bin, reads
 
 type BinCounts struct {
 	Location *dna.Location `json:"location"`
-	Reads    []uint32      `json:"reads"`
+	Reads    []uint        `json:"reads"`
 	Start    uint          `json:"start"`
 	ReadN    uint          `json:"readn"`
 }
@@ -83,11 +83,8 @@ func (reader *TracksReader) Reads(location *dna.Location) (*BinCounts, error) {
 
 	defer db.Close()
 
-	s := location.Start - 1
-	e := location.End - 1
-
-	startBin := s / reader.BinWidth
-	endBin := e / reader.BinWidth
+	startBin := (location.Start - 1) / reader.BinWidth
+	endBin := (location.End - 1) / reader.BinWidth
 
 	rows, err := db.Query(BIN_SQL,
 		startBin,
@@ -97,9 +94,9 @@ func (reader *TracksReader) Reads(location *dna.Location) (*BinCounts, error) {
 		return nil, err
 	}
 
-	var bin uint32
-	var count uint32
-	reads := make([]uint32, endBin-startBin+1)
+	var bin uint
+	var count uint
+	reads := make([]uint, endBin-startBin+1)
 	index := 0
 	for rows.Next() {
 		err := rows.Scan(&bin, &count)
@@ -108,7 +105,7 @@ func (reader *TracksReader) Reads(location *dna.Location) (*BinCounts, error) {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		reads[index] = count
+		reads[bin-startBin] = count
 		index++
 	}
 
