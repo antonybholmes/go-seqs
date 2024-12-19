@@ -15,28 +15,28 @@ import (
 
 const MAGIC_NUMBER_OFFSET_BYTES = 0
 const BIN_SIZE_OFFSET_BYTES = MAGIC_NUMBER_OFFSET_BYTES + 4
-const BIN_WIDTH_OFFSET_BYTES = BIN_SIZE_OFFSET_BYTES + 1
+const BIN_WIDTH_OFFSET_BYTES = BIN_SIZE_OFFSET_BYTES + 4
 const N_BINS_OFFSET_BYTES = BIN_WIDTH_OFFSET_BYTES + 4
 const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
 type BinCounts struct {
 	Location *dna.Location `json:"location"`
-	Start    uint          `json:"start"`
 	Reads    []uint32      `json:"reads"`
-	ReadN    uint32        `json:"readn"`
+	Start    uint          `json:"start"`
+	ReadN    uint          `json:"readn"`
 }
 
 type TracksReader struct {
 	Dir      string
 	Mode     string
-	BinWidth uint
-	ReadN    uint32
 	Genome   string
+	BinWidth uint
+	ReadN    uint
 }
 
 func NewTracksReader(dir string, mode string, binWidth uint, genome string) *TracksReader {
 
-	file, err := os.Open(filepath.Join(dir, "reads.txt"))
+	file, err := os.Open(filepath.Join(dir, fmt.Sprintf("reads_%s.txt", genome)))
 	if err != nil {
 
 		log.Fatal().Msgf("error opening %s", dir)
@@ -55,7 +55,7 @@ func NewTracksReader(dir string, mode string, binWidth uint, genome string) *Tra
 	return &TracksReader{Dir: dir,
 		Mode:     mode,
 		BinWidth: binWidth,
-		ReadN:    uint32(count),
+		ReadN:    uint(count),
 		Genome:   genome}
 }
 
@@ -113,13 +113,11 @@ func (reader *TracksReader) ReadsUint8(location *dna.Location) (*BinCounts, erro
 
 	f.Seek(9, 0)
 
-	var binCount uint32
-	binary.Read(f, binary.LittleEndian, &binCount)
-
-	log.Debug().Msgf("bins %d", binCount)
+	offset := BINS_OFFSET_BYTES + bs
+	log.Debug().Msgf("offset %d %d", offset, bs)
 
 	data := make([]uint8, bl)
-	f.Seek(int64(BINS_OFFSET_BYTES+bs), 0)
+	f.Seek(int64(offset), 0)
 	binary.Read(f, binary.LittleEndian, &data)
 
 	reads := make([]uint32, bl)
@@ -128,7 +126,7 @@ func (reader *TracksReader) ReadsUint8(location *dna.Location) (*BinCounts, erro
 		reads[i] = uint32(c)
 	}
 
-	return reader.Results(location, reads)
+	return reader.Results(location, bs, reads)
 }
 
 func (reader *TracksReader) ReadsUint16(location *dna.Location) (*BinCounts, error) {
@@ -151,11 +149,8 @@ func (reader *TracksReader) ReadsUint16(location *dna.Location) (*BinCounts, err
 
 	f.Seek(9, 0)
 
-	var binCount uint32
-	binary.Read(f, binary.LittleEndian, &binCount)
-
 	data := make([]uint16, bl)
-	f.Seek(int64(BINS_OFFSET_BYTES+bs), 0)
+	f.Seek(int64(BINS_OFFSET_BYTES+bs*2), 0)
 	binary.Read(f, binary.LittleEndian, &data)
 
 	reads := make([]uint32, bl)
@@ -164,7 +159,7 @@ func (reader *TracksReader) ReadsUint16(location *dna.Location) (*BinCounts, err
 		reads[i] = uint32(c)
 	}
 
-	return reader.Results(location, reads)
+	return reader.Results(location, bs, reads)
 }
 
 func (reader *TracksReader) ReadsUint32(location *dna.Location) (*BinCounts, error) {
@@ -187,20 +182,14 @@ func (reader *TracksReader) ReadsUint32(location *dna.Location) (*BinCounts, err
 
 	f.Seek(9, 0)
 
-	var binCount uint32
-	binary.Read(f, binary.LittleEndian, &binCount)
-
 	reads := make([]uint32, bl)
-	f.Seek(int64(BINS_OFFSET_BYTES+bs), 0)
+	f.Seek(int64(BINS_OFFSET_BYTES+bs*4), 0)
 	binary.Read(f, binary.LittleEndian, &reads)
 
-	return reader.Results(location, reads)
+	return reader.Results(location, bs, reads)
 }
 
-func (reader *TracksReader) Results(location *dna.Location, reads []uint32) (*BinCounts, error) {
-	s := location.Start - 1
-
-	bs := s / reader.BinWidth
+func (reader *TracksReader) Results(location *dna.Location, bs uint, reads []uint32) (*BinCounts, error) {
 
 	return &BinCounts{
 		Location: location,

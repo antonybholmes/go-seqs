@@ -22,5 +22,5 @@ func TestWithin(t *testing.T) {
 		t.Fatalf(`err %s`, err)
 	}
 
-	log.Debug().Msgf("err 1 %v", reads)
+	log.Debug().Msgf("%v", reads)
 }
