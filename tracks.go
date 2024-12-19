@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -27,9 +28,93 @@ const BIN_SQL = `SELECT bin, reads
 
 type BinCounts struct {
 	Location *dna.Location `json:"location"`
-	Reads    []uint        `json:"reads"`
+	Bins     []uint        `json:"bins"`
 	Start    uint          `json:"start"`
-	ReadN    uint          `json:"readn"`
+	Reads    uint          `json:"reads"`
+	BinWidth uint          `json:"binWidth"`
+}
+
+type Track struct {
+	Genome string `json:"genome"`
+	Name   string `json:"name"`
+}
+
+type TracksDB struct {
+	cacheMap map[string][]Track
+	dir      string
+}
+
+func (tracksDb *TracksDB) Dir() string {
+	return tracksDb.dir
+}
+
+func NewTrackDB(dir string) *TracksDB {
+	cacheMap := make(map[string][]Track)
+
+	files, err := os.ReadDir(dir)
+
+	log.Debug().Msgf("---- track db ----")
+
+	if err != nil {
+		log.Fatal().Msgf("error opening %s", dir)
+	}
+
+	log.Debug().Msgf("caching track databases in %s...", dir)
+
+	// Sort by name
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].Name() < files[j].Name()
+	})
+
+	for _, genome := range files {
+		if genome.IsDir() {
+
+			sampleFiles, err := os.ReadDir(filepath.Join(dir, genome.Name()))
+
+			if err != nil {
+				log.Fatal().Msgf("error opening %s", dir)
+			}
+
+			cacheMap[genome.Name()] = make([]Track, 0, 10)
+
+			// Sort by name
+			sort.Slice(sampleFiles, func(i, j int) bool {
+				return sampleFiles[i].Name() < sampleFiles[j].Name()
+			})
+
+			for _, sample := range sampleFiles {
+				if sample.IsDir() {
+					cacheMap[genome.Name()] = append(cacheMap[genome.Name()], Track{Genome: genome.Name(), Name: sample.Name()})
+				}
+			}
+		}
+
+	}
+
+	log.Debug().Msgf("---- end ----")
+
+	return &TracksDB{dir: dir, cacheMap: cacheMap}
+}
+
+func (tracksDb *TracksDB) Genomes() []string {
+	keys := make([]string, 0, len(tracksDb.cacheMap))
+
+	for k := range tracksDb.cacheMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	return keys
+}
+
+func (tracksDb *TracksDB) Tracks(genome string) ([]Track, error) {
+	tracks, ok := tracksDb.cacheMap[genome]
+
+	if ok {
+		return tracks, nil
+	} else {
+		return nil, fmt.Errorf("genome %s not found", genome)
+	}
 }
 
 type TracksReader struct {
@@ -71,7 +156,7 @@ func (reader *TracksReader) getPath(location *dna.Location) string {
 
 }
 
-func (reader *TracksReader) Reads(location *dna.Location) (*BinCounts, error) {
+func (reader *TracksReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
 	path := reader.getPath(location)
 
@@ -98,6 +183,7 @@ func (reader *TracksReader) Reads(location *dna.Location) (*BinCounts, error) {
 	var count uint
 	reads := make([]uint, endBin-startBin+1)
 	index := 0
+
 	for rows.Next() {
 		err := rows.Scan(&bin, &count)
 
@@ -112,8 +198,9 @@ func (reader *TracksReader) Reads(location *dna.Location) (*BinCounts, error) {
 	return &BinCounts{
 		Location: location,
 		Start:    startBin*reader.BinWidth + 1,
-		Reads:    reads,
-		ReadN:    reader.ReadN,
+		Bins:     reads,
+		Reads:    reader.ReadN,
+		BinWidth: reader.BinWidth,
 	}, nil
 
 	// var magic uint32

@@ -8,7 +8,7 @@ import (
 )
 
 func TestWithin(t *testing.T) {
-	location, err := dna.ParseLocation("chr1:100000-100100")
+	location, err := dna.ParseLocation("chr1:99000-100100")
 
 	if err != nil {
 		t.Fatalf(`err %s`, err)
@@ -16,11 +16,11 @@ func TestWithin(t *testing.T) {
 
 	reader := NewTracksReader("/home/antony/development/data/modules/tracks/chip_seq/hg19/CB4_BCL6_RK040/", "max", 100, "hg19")
 
-	reads, err := reader.Reads(location)
+	binCounts, err := reader.BinCounts(location)
 
 	if err != nil {
 		t.Fatalf(`err %s`, err)
 	}
 
-	log.Debug().Msgf("%v", reads)
+	log.Debug().Msgf("%v", binCounts)
 }
