@@ -23,7 +23,7 @@ const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
 const BIN_SQL = `SELECT start_bin, end_bin, reads 
 	FROM track
- 	WHERE start_bin >= ?1 AND end_bin < ?2
+ 	WHERE start_bin >= ?1 AND start_bin < ?2
 	ORDER BY bin`
 
 type BinCounts struct {
