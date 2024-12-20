@@ -21,9 +21,9 @@ const BIN_WIDTH_OFFSET_BYTES = BIN_SIZE_OFFSET_BYTES + 4
 const N_BINS_OFFSET_BYTES = BIN_WIDTH_OFFSET_BYTES + 4
 const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
-const BIN_SQL = `SELECT bin, reads 
+const BIN_SQL = `SELECT start_bin, end_bin, reads 
 	FROM track
- 	WHERE bin >= ?1 AND bin <= ?2
+ 	WHERE start_bin >= ?1 AND end_bin < ?2
 	ORDER BY bin`
 
 type BinCounts struct {
@@ -120,19 +120,23 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 		return nil, err
 	}
 
-	var bin uint
+	var readBlockStart uint
+	var readBlockEnd uint
 	var count uint
 	reads := make([]uint, endBin-startBin+1)
 	index := 0
 
 	for rows.Next() {
-		err := rows.Scan(&bin, &count)
+		err := rows.Scan(&readBlockStart, &readBlockEnd, &count)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		reads[bin-startBin] = count
+		for bin := readBlockStart; bin < readBlockEnd; bin++ {
+			reads[bin-startBin] = count
+		}
+
 		index++
 	}
 
