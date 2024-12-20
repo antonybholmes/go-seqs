@@ -9,13 +9,13 @@ replace github.com/antonybholmes/go-sys => ../go-sys
 replace github.com/antonybholmes/go-basemath => ../go-basemath
 
 require (
-	github.com/antonybholmes/go-sys v0.0.0-00010101000000-000000000000
+	github.com/antonybholmes/go-basemath v0.0.0-20240825181410-a6174a39116c
+	github.com/antonybholmes/go-sys v0.0.0-20241021142915-13ff92cbbcdc
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/rs/zerolog v1.33.0
 )
 
 require (
-	github.com/antonybholmes/go-basemath v0.0.0-20240825181410-a6174a39116c // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.4 // indirect
