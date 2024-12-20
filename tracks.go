@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/antonybholmes/go-dna"
+	"github.com/antonybholmes/go-sys"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
 )
@@ -20,6 +21,8 @@ import (
 // const BIN_WIDTH_OFFSET_BYTES = BIN_SIZE_OFFSET_BYTES + 4
 // const N_BINS_OFFSET_BYTES = BIN_WIDTH_OFFSET_BYTES + 4
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
+
+const INFO_SQL = `SELECT name, reads FROM info`
 
 const BIN_SQL = `SELECT start_bin, end_bin, reads 
 	FROM track
@@ -31,7 +34,6 @@ type BinCounts struct {
 	Location *dna.Location `json:"location"`
 	Bins     []uint        `json:"bins"`
 	Start    uint          `json:"start"`
-	Reads    uint          `json:"reads"`
 	BinWidth uint          `json:"binWidth"`
 }
 
@@ -39,6 +41,7 @@ type Track struct {
 	Platform string `json:"platform"`
 	Genome   string `json:"genome"`
 	Name     string `json:"name"`
+	Reads    uint   `json:"reads"`
 }
 
 type TrackGenome struct {
@@ -69,8 +72,8 @@ func NewTrackReader(dir string, track Track, binWidth uint, mode string) *TrackR
 	dir = filepath.Join(dir, track.Platform, track.Genome, track.Name)
 
 	file, err := os.Open(filepath.Join(dir, fmt.Sprintf("reads_%s.txt", track.Genome)))
-	if err != nil {
 
+	if err != nil {
 		log.Fatal().Msgf("error opening %s", dir)
 	}
 
@@ -145,7 +148,7 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 		Location: location,
 		Start:    startBin*reader.BinWidth + 1,
 		Bins:     reads,
-		Reads:    reader.ReadN,
+
 		BinWidth: reader.BinWidth,
 	}, nil
 
@@ -343,7 +346,24 @@ func NewTrackDB(dir string) *TracksDB {
 						if sample.IsDir() {
 							log.Debug().Msgf("found sample %s", sample.Name())
 
-							cacheMap[platform.Name()][genome.Name()] = append(cacheMap[platform.Name()][genome.Name()], Track{Platform: platform.Name(), Genome: genome.Name(), Name: sample.Name()})
+							path := filepath.Join(dir, platform.Name(), genome.Name(), sample.Name(), "info.db")
+
+							db := sys.Must(sql.Open("sqlite3", path))
+
+							defer db.Close()
+
+							var reads uint
+							var name string
+							err := db.QueryRow(INFO_SQL).Scan(&name, &reads)
+
+							if err != nil {
+								log.Fatal().Msgf("info not found")
+							}
+
+							cacheMap[platform.Name()][genome.Name()] = append(cacheMap[platform.Name()][genome.Name()], Track{Platform: platform.Name(),
+								Genome: genome.Name(),
+								Name:   name,
+								Reads:  reads})
 						}
 					}
 				}

@@ -8,11 +8,23 @@ replace github.com/antonybholmes/go-sys => ../go-sys
 
 replace github.com/antonybholmes/go-basemath => ../go-basemath
 
-require github.com/rs/zerolog v1.33.0
+require (
+	github.com/antonybholmes/go-sys v0.0.0-00010101000000-000000000000
+	github.com/mattn/go-sqlite3 v1.14.24
+	github.com/rs/zerolog v1.33.0
+)
 
 require (
 	github.com/antonybholmes/go-basemath v0.0.0-20240825181410-a6174a39116c // indirect
-	github.com/mattn/go-sqlite3 v1.14.24 // indirect
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
+	github.com/richardlehane/mscfb v1.0.4 // indirect
+	github.com/richardlehane/msoleps v1.0.4 // indirect
+	github.com/xuri/efp v0.0.0-20241211021726-c4e992084aa6 // indirect
+	github.com/xuri/excelize/v2 v2.9.0 // indirect
+	github.com/xuri/nfp v0.0.0-20240318013403-ab9948c2c4a7 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 )
 
 require (
