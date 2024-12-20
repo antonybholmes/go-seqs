@@ -45,8 +45,6 @@ for root, dirs, files in os.walk(dir):
                
             conn.close()
 
-print(dir)
-
 with open(os.path.join(dir, "tracks.sql"), "w") as f:
     print("BEGIN TRANSACTION;", file=f)
     for row in data:

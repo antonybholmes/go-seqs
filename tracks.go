@@ -21,7 +21,7 @@ import (
 // const N_BINS_OFFSET_BYTES = BIN_WIDTH_OFFSET_BYTES + 4
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
-const TRACK_SQL = `SELECT name, reads FROM track`
+const TRACK_SQL = `SELECT public_id, name, reads, stat_mode FROM track`
 
 const BIN_SQL = `SELECT start, end, reads 
 	FROM bins
@@ -40,12 +40,15 @@ type Track struct {
 	Platform string `json:"platform"`
 	Genome   string `json:"genome"`
 	Name     string `json:"name"`
-	Reads    uint   `json:"reads"`
 }
 
 type TrackInfo struct {
-	Track Track
-	Reads uint `json:"reads"`
+	PublicId string `json:"publicId"`
+	Platform string `json:"platform"`
+	Genome   string `json:"genome"`
+	Name     string `json:"name"`
+	Reads    uint   `json:"reads"`
+	Stat     string `json:"stat"`
 }
 
 type TrackGenome struct {
@@ -87,7 +90,9 @@ func NewTrackReader(dir string, track Track, binWidth uint, mode string) (*Track
 
 	var reads uint
 	var name string
-	err = db.QueryRow(TRACK_SQL).Scan(&name, &reads)
+	var publicId string
+	var stat string
+	err = db.QueryRow(TRACK_SQL).Scan(&publicId, &name, &reads, &stat)
 
 	if err != nil {
 		return nil, err
@@ -382,16 +387,20 @@ func NewTrackDB(dir string) *TracksDB {
 
 							var reads uint
 							var name string
-							err := db.QueryRow(TRACK_SQL).Scan(&name, &reads)
+							var publicId string
+							var stat string
+							err := db.QueryRow(TRACK_SQL).Scan(&publicId, &name, &reads, &stat)
 
 							if err != nil {
 								log.Fatal().Msgf("info not found %s", err)
 							}
 
-							cacheMap[platform.Name()][genome.Name()] = append(cacheMap[platform.Name()][genome.Name()], TrackInfo{Track: Track{Platform: platform.Name(),
-								Genome: genome.Name(),
-								Name:   name},
-								Reads: reads})
+							cacheMap[platform.Name()][genome.Name()] = append(cacheMap[platform.Name()][genome.Name()], TrackInfo{Platform: platform.Name(),
+								Genome:   genome.Name(),
+								PublicId: publicId,
+								Name:     name,
+								Reads:    reads,
+								Stat:     stat})
 						}
 					}
 				}
