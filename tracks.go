@@ -47,8 +47,8 @@ type TrackInfo struct {
 	Platform string `json:"platform"`
 	Genome   string `json:"genome"`
 	Name     string `json:"name"`
-	Reads    uint   `json:"reads"`
 	Stat     string `json:"stat"`
+	Reads    uint   `json:"reads"`
 }
 
 type TrackGenome struct {
