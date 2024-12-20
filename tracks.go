@@ -346,7 +346,7 @@ func NewTrackDB(dir string) *TracksDB {
 						if sample.IsDir() {
 							log.Debug().Msgf("found sample %s", sample.Name())
 
-							path := filepath.Join(dir, platform.Name(), genome.Name(), sample.Name(), "info.db")
+							path := filepath.Join(dir, platform.Name(), genome.Name(), sample.Name(), "sample.db")
 
 							db := sys.Must(sql.Open("sqlite3", path))
 
@@ -357,7 +357,7 @@ func NewTrackDB(dir string) *TracksDB {
 							err := db.QueryRow(INFO_SQL).Scan(&name, &reads)
 
 							if err != nil {
-								log.Fatal().Msgf("info not found")
+								log.Fatal().Msgf("info not found %s", err)
 							}
 
 							cacheMap[platform.Name()][genome.Name()] = append(cacheMap[platform.Name()][genome.Name()], Track{Platform: platform.Name(),
