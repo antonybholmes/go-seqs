@@ -7,7 +7,8 @@ CREATE TABLE track (
 	genome TEXT NOT NULL,
 	name TEXT NOT NULL,
 	chr TEXT NOT NULL,
-	bin_width INTEGER NOT NULL);
+	bin_width INTEGER NOT NULL,
+	stat_mode TEXT NOT NULL);
 
 -- CREATE TABLE track (
 	-- id INTEGER PRIMARY KEY ASC,
@@ -17,6 +18,6 @@ CREATE TABLE track (
 -- CREATE INDEX track_bin_idx ON track (bin);
 
 CREATE TABLE bins (
-	bin_start INTEGER PRIMARY KEY,
-	bin_end INTEGER NOT NULL,
+	start INTEGER PRIMARY KEY,
+	end INTEGER NOT NULL,
 	reads INTEGER NOT NULL);

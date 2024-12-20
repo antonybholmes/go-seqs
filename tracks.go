@@ -1,15 +1,14 @@
 package tracks
 
 import (
-	"bufio"
 	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
+	basemath "github.com/antonybholmes/go-basemath"
 	"github.com/antonybholmes/go-dna"
 	"github.com/antonybholmes/go-sys"
 	_ "github.com/mattn/go-sqlite3"
@@ -22,12 +21,12 @@ import (
 // const N_BINS_OFFSET_BYTES = BIN_WIDTH_OFFSET_BYTES + 4
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
-const INFO_SQL = `SELECT name, reads FROM info`
+const TRACK_SQL = `SELECT name, reads FROM track`
 
-const BIN_SQL = `SELECT start_bin, end_bin, reads 
-	FROM track
- 	WHERE start_bin >= ?1 AND start_bin < ?2
-	ORDER BY bin`
+const BIN_SQL = `SELECT start, end, reads 
+	FROM bins
+ 	WHERE start >= ?1 AND end < ?2
+	ORDER BY start`
 
 type BinCounts struct {
 	Track    Track         `json:"track"`
@@ -44,9 +43,14 @@ type Track struct {
 	Reads    uint   `json:"reads"`
 }
 
+type TrackInfo struct {
+	Track Track
+	Reads uint `json:"reads"`
+}
+
 type TrackGenome struct {
-	Name   string  `json:"name"`
-	Tracks []Track `json:"tracks"`
+	Name   string      `json:"name"`
+	Tracks []TrackInfo `json:"tracks"`
 }
 
 type TrackPlaform struct {
@@ -61,42 +65,58 @@ type AllTracks struct {
 
 type TrackReader struct {
 	Dir      string
-	Mode     string
+	Stat     string
 	Track    Track
 	BinWidth uint
-	ReadN    uint
+	Reads    uint
 }
 
-func NewTrackReader(dir string, track Track, binWidth uint, mode string) *TrackReader {
+func NewTrackReader(dir string, track Track, binWidth uint, mode string) (*TrackReader, error) {
 
 	dir = filepath.Join(dir, track.Platform, track.Genome, track.Name)
 
-	file, err := os.Open(filepath.Join(dir, fmt.Sprintf("reads_%s.txt", track.Genome)))
+	path := filepath.Join(dir, "track.db")
+
+	db, err := sql.Open("sqlite3", path)
 
 	if err != nil {
-		log.Fatal().Msgf("error opening %s", dir)
+		return nil, err
 	}
 
-	defer file.Close()
-	// Create a scanner
-	scanner := bufio.NewScanner(file)
-	scanner.Scan()
+	defer db.Close()
 
-	count, err := strconv.Atoi(scanner.Text())
+	var reads uint
+	var name string
+	err = db.QueryRow(TRACK_SQL).Scan(&name, &reads)
 
 	if err != nil {
-		log.Fatal().Msgf("could not count reads")
+		return nil, err
 	}
+
+	// if err != nil {
+	// 	return nil, fmt.Errorf("error opening %s", file)
+	// }
+
+	// defer file.Close()
+	// // Create a scanner
+	// scanner := bufio.NewScanner(file)
+	// scanner.Scan()
+
+	// count, err := strconv.Atoi(scanner.Text())
+
+	// if err != nil {
+	// 	return nil, fmt.Errorf("could not count reads")
+	// }
 
 	return &TrackReader{Dir: dir,
-		Mode:     mode,
+		Stat:     mode,
 		BinWidth: binWidth,
-		ReadN:    uint(count),
-		Track:    track}
+		Reads:    reads,
+		Track:    track}, nil
 }
 
 func (reader *TrackReader) getPath(location *dna.Location) string {
-	return filepath.Join(reader.Dir, fmt.Sprintf("%s_bw%d_c%s_%s.db", strings.ToLower(location.Chr), reader.BinWidth, reader.Mode, reader.Track.Genome))
+	return filepath.Join(reader.Dir, fmt.Sprintf("%s_bw%d_%s.db", strings.ToLower(location.Chr), reader.BinWidth, reader.Track.Genome))
 
 }
 
@@ -104,9 +124,12 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 
 	path := reader.getPath(location)
 
+	log.Debug().Msgf("track path %s", path)
+
 	db, err := sql.Open("sqlite3", path)
 
 	if err != nil {
+		log.Debug().Msgf("bin sql err %s", err)
 		return nil, err
 	}
 
@@ -136,7 +159,12 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		for bin := readBlockStart; bin < readBlockEnd; bin++ {
+		// we don't want to load bin data that goes outside our coordinates
+		// of interest. A long gapped bin, may end beyond the blocks we are
+		// interested in, so we need to stop the loop short if so.
+		endBin := basemath.UintMin(startBin+uint(len(reads)), readBlockEnd)
+
+		for bin := readBlockStart; bin < endBin; bin++ {
 			reads[bin-startBin] = count
 		}
 
@@ -277,7 +305,7 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 // }
 
 type TracksDB struct {
-	cacheMap map[string]map[string][]Track
+	cacheMap map[string]map[string][]TrackInfo
 	dir      string
 }
 
@@ -286,7 +314,7 @@ func (tracksDb *TracksDB) Dir() string {
 }
 
 func NewTrackDB(dir string) *TracksDB {
-	cacheMap := make(map[string]map[string][]Track)
+	cacheMap := make(map[string]map[string][]TrackInfo)
 
 	platformFiles, err := os.ReadDir(dir)
 
@@ -308,7 +336,7 @@ func NewTrackDB(dir string) *TracksDB {
 
 			log.Debug().Msgf("found platform %s", platform.Name())
 
-			cacheMap[platform.Name()] = make(map[string][]Track)
+			cacheMap[platform.Name()] = make(map[string][]TrackInfo)
 
 			platformDir := filepath.Join(dir, platform.Name())
 
@@ -332,10 +360,10 @@ func NewTrackDB(dir string) *TracksDB {
 					sampleFiles, err := os.ReadDir(sampleDir)
 
 					if err != nil {
-						log.Fatal().Msgf("error opening %s", sampleDir)
+						log.Fatal().Msgf("error sample dir %s", sampleDir)
 					}
 
-					cacheMap[platform.Name()][genome.Name()] = make([]Track, 0, 10)
+					cacheMap[platform.Name()][genome.Name()] = make([]TrackInfo, 0, 10)
 
 					// Sort by name
 					sort.Slice(sampleFiles, func(i, j int) bool {
@@ -346,7 +374,7 @@ func NewTrackDB(dir string) *TracksDB {
 						if sample.IsDir() {
 							log.Debug().Msgf("found sample %s", sample.Name())
 
-							path := filepath.Join(dir, platform.Name(), genome.Name(), sample.Name(), "sample.db")
+							path := filepath.Join(dir, platform.Name(), genome.Name(), sample.Name(), "track.db")
 
 							db := sys.Must(sql.Open("sqlite3", path))
 
@@ -354,16 +382,16 @@ func NewTrackDB(dir string) *TracksDB {
 
 							var reads uint
 							var name string
-							err := db.QueryRow(INFO_SQL).Scan(&name, &reads)
+							err := db.QueryRow(TRACK_SQL).Scan(&name, &reads)
 
 							if err != nil {
 								log.Fatal().Msgf("info not found %s", err)
 							}
 
-							cacheMap[platform.Name()][genome.Name()] = append(cacheMap[platform.Name()][genome.Name()], Track{Platform: platform.Name(),
+							cacheMap[platform.Name()][genome.Name()] = append(cacheMap[platform.Name()][genome.Name()], TrackInfo{Track: Track{Platform: platform.Name(),
 								Genome: genome.Name(),
-								Name:   name,
-								Reads:  reads})
+								Name:   name},
+								Reads: reads})
 						}
 					}
 				}
@@ -406,7 +434,7 @@ func (tracksDb *TracksDB) Genomes(platform string) ([]string, error) {
 	}
 }
 
-func (tracksDb *TracksDB) Tracks(platform string, genome string) ([]Track, error) {
+func (tracksDb *TracksDB) Tracks(platform string, genome string) ([]TrackInfo, error) {
 	genomes, ok := tracksDb.cacheMap[platform]
 
 	if ok {
