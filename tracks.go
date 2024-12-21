@@ -313,8 +313,8 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 
 type TracksDB struct {
 	cacheMap map[string]map[string][]TrackInfo
-	dir      string
 	db       *sql.DB
+	dir      string
 }
 
 func (tracksDb *TracksDB) Dir() string {
