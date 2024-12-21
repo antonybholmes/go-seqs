@@ -314,7 +314,7 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 type TracksDB struct {
 	cacheMap map[string]map[string][]TrackInfo
 	dir      string
-	dbPath   string
+	db       *sql.DB
 }
 
 func (tracksDb *TracksDB) Dir() string {
@@ -415,9 +415,9 @@ func NewTrackDB(dir string) *TracksDB {
 
 	log.Debug().Msgf("---- end ----")
 
-	dbPath := filepath.Join(dir, "tracks.db")
+	db := sys.Must(sql.Open("sqlite3", filepath.Join(dir, "tracks.db")))
 
-	return &TracksDB{dir: dir, cacheMap: cacheMap, dbPath: dbPath}
+	return &TracksDB{dir: dir, cacheMap: cacheMap, db: db}
 }
 
 func (tracksDb *TracksDB) Platforms() []string {
@@ -500,13 +500,6 @@ func (tracksDb *TracksDB) AllTracks() (*AllTracks, error) {
 }
 
 func (tracksDb *TracksDB) ReaderFromTrackId(publicId string, binWidth uint) (*TrackReader, error) {
-	db, err := sql.Open("sqlite3", tracksDb.dbPath)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer db.Close()
 
 	var platform string
 	var genome string
@@ -516,7 +509,7 @@ func (tracksDb *TracksDB) ReaderFromTrackId(publicId string, binWidth uint) (*Tr
 	var dir string
 	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, dir FROM tracks WHERE tracks.publicId = ?1`
 
-	err = db.QueryRow(FIND_TRACK_SQL, publicId).Scan(&platform, &genome, &name, &reads, &stat, &dir)
+	err := tracksDb.db.QueryRow(FIND_TRACK_SQL, publicId).Scan(&platform, &genome, &name, &reads, &stat, &dir)
 
 	if err != nil {
 		return nil, err
