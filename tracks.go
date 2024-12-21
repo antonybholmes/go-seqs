@@ -23,6 +23,8 @@ import (
 
 const TRACK_SQL = `SELECT public_id, name, reads, stat_mode FROM track`
 
+const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, dir FROM tracks WHERE tracks.public_id = ?1`
+
 const BIN_SQL = `SELECT start, end, reads 
 	FROM bins
  	WHERE start >= ?1 AND end < ?2
@@ -74,7 +76,7 @@ type TrackReader struct {
 	Reads    uint
 }
 
-func NewTrackReader(dir string, track Track, binWidth uint, mode string) (*TrackReader, error) {
+func NewTrackReader(dir string, track Track, binWidth uint) (*TrackReader, error) {
 
 	dir = filepath.Join(dir, track.Platform, track.Genome, track.Name)
 
@@ -114,7 +116,7 @@ func NewTrackReader(dir string, track Track, binWidth uint, mode string) (*Track
 	// }
 
 	return &TrackReader{Dir: dir,
-		Stat:     mode,
+		Stat:     stat,
 		BinWidth: binWidth,
 		Reads:    reads,
 		Track:    track}, nil
@@ -312,6 +314,7 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 type TracksDB struct {
 	cacheMap map[string]map[string][]TrackInfo
 	dir      string
+	dbPath   string
 }
 
 func (tracksDb *TracksDB) Dir() string {
@@ -412,7 +415,9 @@ func NewTrackDB(dir string) *TracksDB {
 
 	log.Debug().Msgf("---- end ----")
 
-	return &TracksDB{dir: dir, cacheMap: cacheMap}
+	dbPath := filepath.Join(dir, "tracks.db")
+
+	return &TracksDB{dir: dir, cacheMap: cacheMap, dbPath: dbPath}
 }
 
 func (tracksDb *TracksDB) Platforms() []string {
@@ -492,4 +497,32 @@ func (tracksDb *TracksDB) AllTracks() (*AllTracks, error) {
 	}
 
 	return &ret, nil
+}
+
+func (tracksDb *TracksDB) ReaderFromTrackId(publicId string, binWidth uint) (*TrackReader, error) {
+	db, err := sql.Open("sqlite3", tracksDb.dbPath)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer db.Close()
+
+	var platform string
+	var genome string
+	var name string
+	var reads uint
+	var stat string
+	var dir string
+	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, dir FROM tracks WHERE tracks.publicId = ?1`
+
+	err = db.QueryRow(FIND_TRACK_SQL, publicId).Scan(&platform, &genome, &name, &reads, &stat, &dir)
+
+	if err != nil {
+		return nil, err
+	}
+
+	track := Track{Platform: platform, Genome: genome, Name: name}
+
+	return NewTrackReader(tracksDb.dir, track, binWidth)
 }

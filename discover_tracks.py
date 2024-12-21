@@ -6,8 +6,6 @@ Encode read counts per base in 2 bytes
 """
 import argparse
 import os
-import sys
-import libseq
 import sqlite3
 
 parser = argparse.ArgumentParser()
@@ -32,7 +30,7 @@ for root, dirs, files in os.walk(dir):
             cursor = conn.cursor()
 
             # Execute a query to fetch data
-            cursor.execute('SELECT platform, genome, name, reads, stat_mode FROM track')
+            cursor.execute('SELECT platform, genome, public_id, name, reads, stat_mode FROM track')
 
             # Fetch all results
             results = cursor.fetchall()
@@ -50,6 +48,6 @@ with open(os.path.join(dir, "tracks.sql"), "w") as f:
     for row in data:
          
         values  = ', '.join([f"'{v}'" for v in row])
-        print(f"INSERT INTO tracks (platform, genome, name, reads, stat_mode, dir) VALUES ({values});", file=f)
+        print(f"INSERT INTO tracks (platform, genome, public_id, name, reads, stat_mode, dir) VALUES ({values});", file=f)
 
     print("COMMIT;", file=f)

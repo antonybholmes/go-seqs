@@ -1,4 +1,4 @@
-dir=/home/antony/development/data/modules/tracks
+dir=data/modules/tracks
 
 python discover_tracks.py --dir=${dir} 
 

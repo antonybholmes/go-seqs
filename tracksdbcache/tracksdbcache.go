@@ -41,6 +41,6 @@ func AllTracks() (*tracks.AllTracks, error) {
 	return instance.AllTracks()
 }
 
-func Reader(track tracks.Track, binWidth uint) (*tracks.TrackReader, error) {
-	return tracks.NewTrackReader(instance.Dir(), track, binWidth, "mean")
+func ReaderFromTrackId(publicId string, binWidth uint) (*tracks.TrackReader, error) {
+	return instance.ReaderFromTrackId(publicId, binWidth)
 }
