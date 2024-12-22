@@ -3,10 +3,7 @@ package tracks
 import (
 	"database/sql"
 	"fmt"
-	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 
 	basemath "github.com/antonybholmes/go-basemath"
 	"github.com/antonybholmes/go-dna"
@@ -21,9 +18,29 @@ import (
 // const N_BINS_OFFSET_BYTES = BIN_WIDTH_OFFSET_BYTES + 4
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
+const GENOMES_SQL = `SELECT DISTINCT genome FROM tracks ORDER BY genome`
+const PLATFORMS_SQL = `SELECT DISTINCT platform FROM tracks WHERE genome = ?1 ORDER BY platform`
+
 const TRACK_SQL = `SELECT public_id, name, reads, stat_mode FROM track`
 
-const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, dir FROM tracks WHERE tracks.public_id = ?1`
+const TRACKS_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
+	FROM tracks 
+	WHERE genome = ?1 AND platform = ?2 
+	ORDER BY name`
+
+const ALL_TRACKS_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
+	FROM tracks 
+	WHERE genome = ?1 
+	ORDER BY genome, platform, name`
+
+const TRACK_FROM_ID_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
+	FROM tracks 
+	WHERE tracks.public_id = ?1`
+
+const SEARCH_TRACKS_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
+	FROM tracks 
+	WHERE genome = ?1 AND (public_id = ?1 OR platform = ?1 OR name LIKE ?2)
+	ORDER BY genome, platform, name`
 
 const BIN_SQL = `SELECT start, end, reads 
 	FROM bins
@@ -39,34 +56,34 @@ type BinCounts struct {
 }
 
 type Track struct {
-	Platform string `json:"platform"`
 	Genome   string `json:"genome"`
+	Platform string `json:"platform"`
 	Name     string `json:"name"`
 }
 
 type TrackInfo struct {
 	PublicId string `json:"publicId"`
-	Platform string `json:"platform"`
 	Genome   string `json:"genome"`
+	Platform string `json:"platform"`
 	Name     string `json:"name"`
 	Stat     string `json:"stat"`
 	Reads    uint   `json:"reads"`
 }
 
-type TrackGenome struct {
-	Name   string      `json:"name"`
-	Tracks []TrackInfo `json:"tracks"`
-}
+// type TrackGenome struct {
+// 	Name   string      `json:"name"`
+// 	Tracks []TrackInfo `json:"tracks"`
+// }
 
-type TrackPlaform struct {
-	Name    string        `json:"name"`
-	Genomes []TrackGenome `json:"genomes"`
-}
+// type TrackPlaform struct {
+// 	Name    string        `json:"name"`
+// 	Genomes []TrackGenome `json:"genomes"`
+// }
 
-type AllTracks struct {
-	Name      string         `json:"name"`
-	Platforms []TrackPlaform `json:"platforms"`
-}
+// type AllTracks struct {
+// 	Name      string         `json:"name"`
+// 	Platforms []TrackPlaform `json:"platforms"`
+// }
 
 type TrackReader struct {
 	Dir      string
@@ -78,9 +95,7 @@ type TrackReader struct {
 
 func NewTrackReader(dir string, track Track, binWidth uint) (*TrackReader, error) {
 
-	dir = filepath.Join(dir, track.Platform, track.Genome, track.Name)
-
-	path := filepath.Join(dir, "track.db")
+	path := filepath.Join(dir, "track.db?mode=ro")
 
 	db, err := sql.Open("sqlite3", path)
 
@@ -123,7 +138,7 @@ func NewTrackReader(dir string, track Track, binWidth uint) (*TrackReader, error
 }
 
 func (reader *TrackReader) getPath(location *dna.Location) string {
-	return filepath.Join(reader.Dir, fmt.Sprintf("%s_bw%d_%s.db", strings.ToLower(location.Chr), reader.BinWidth, reader.Track.Genome))
+	return filepath.Join(reader.Dir, fmt.Sprintf("%s_bw%d_%s.db?mode=ro", location.Chr, reader.BinWidth, reader.Track.Genome))
 
 }
 
@@ -157,7 +172,7 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 	var readBlockEnd uint
 	var count uint
 	reads := make([]uint, endBin-startBin+1)
-	index := 0
+	lastBinOfInterest := startBin + uint(len(reads))
 
 	for rows.Next() {
 		err := rows.Scan(&readBlockStart, &readBlockEnd, &count)
@@ -169,13 +184,13 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 		// we don't want to load bin data that goes outside our coordinates
 		// of interest. A long gapped bin, may end beyond the blocks we are
 		// interested in, so we need to stop the loop short if so.
-		endBin := basemath.UintMin(startBin+uint(len(reads)), readBlockEnd)
+		endBin := basemath.UintMin(readBlockEnd, lastBinOfInterest)
 
+		// endbin is always 1 past the actual end of the bin, i.e. the start of
+		// another bin, therefore we treat it as exclusive
 		for bin := readBlockStart; bin < endBin; bin++ {
 			reads[bin-startBin] = count
 		}
-
-		index++
 	}
 
 	return &BinCounts{
@@ -183,7 +198,6 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 		Location: location,
 		Start:    startBin*reader.BinWidth + 1,
 		Bins:     reads,
-
 		BinWidth: reader.BinWidth,
 	}, nil
 
@@ -312,9 +326,12 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 // }
 
 type TracksDB struct {
-	cacheMap map[string]map[string][]TrackInfo
-	db       *sql.DB
-	dir      string
+	//cacheMap map[string]map[string][]TrackInfo
+	db               *sql.DB
+	dir              string
+	stmtAllTracks    *sql.Stmt
+	stmtSearchTracks *sql.Stmt
+	stmtTrackFromId  *sql.Stmt
 }
 
 func (tracksDb *TracksDB) Dir() string {
@@ -322,185 +339,235 @@ func (tracksDb *TracksDB) Dir() string {
 }
 
 func NewTrackDB(dir string) *TracksDB {
-	cacheMap := make(map[string]map[string][]TrackInfo)
+	// cacheMap := make(map[string]map[string][]TrackInfo)
 
-	platformFiles, err := os.ReadDir(dir)
+	// platformFiles, err := os.ReadDir(dir)
 
-	log.Debug().Msgf("---- track db ----")
+	// log.Debug().Msgf("---- track db ----")
+
+	// if err != nil {
+	// 	log.Fatal().Msgf("error opening %s", dir)
+	// }
+
+	// log.Debug().Msgf("caching track databases in %s...", dir)
+
+	// // Sort by name
+	// sort.Slice(platformFiles, func(i, j int) bool {
+	// 	return platformFiles[i].Name() < platformFiles[j].Name()
+	// })
+
+	// for _, platform := range platformFiles {
+	// 	if platform.IsDir() {
+
+	// 		log.Debug().Msgf("found platform %s", platform.Name())
+
+	// 		cacheMap[platform.Name()] = make(map[string][]TrackInfo)
+
+	// 		platformDir := filepath.Join(dir, platform.Name())
+
+	// 		genomeFiles, err := os.ReadDir(platformDir)
+
+	// 		if err != nil {
+	// 			log.Fatal().Msgf("error opening %s", platformDir)
+	// 		}
+
+	// 		sort.Slice(genomeFiles, func(i, j int) bool {
+	// 			return genomeFiles[i].Name() < genomeFiles[j].Name()
+	// 		})
+
+	// 		for _, genome := range genomeFiles {
+	// 			if genome.IsDir() {
+
+	// 				log.Debug().Msgf("found genome %s", genome.Name())
+
+	// 				sampleDir := filepath.Join(dir, platform.Name(), genome.Name())
+
+	// 				sampleFiles, err := os.ReadDir(sampleDir)
+
+	// 				if err != nil {
+	// 					log.Fatal().Msgf("error sample dir %s", sampleDir)
+	// 				}
+
+	// 				cacheMap[platform.Name()][genome.Name()] = make([]TrackInfo, 0, 10)
+
+	// 				// Sort by name
+	// 				sort.Slice(sampleFiles, func(i, j int) bool {
+	// 					return sampleFiles[i].Name() < sampleFiles[j].Name()
+	// 				})
+
+	// 				for _, sample := range sampleFiles {
+	// 					if sample.IsDir() {
+	// 						log.Debug().Msgf("found sample %s", sample.Name())
+
+	// 						path := filepath.Join(dir, platform.Name(), genome.Name(), sample.Name(), "track.db")
+
+	// 						db := sys.Must(sql.Open("sqlite3", path))
+
+	// 						defer db.Close()
+
+	// 						var reads uint
+	// 						var name string
+	// 						var publicId string
+	// 						var stat string
+	// 						err := db.QueryRow(TRACK_SQL).Scan(&publicId, &name, &reads, &stat)
+
+	// 						if err != nil {
+	// 							log.Fatal().Msgf("info not found %s", err)
+	// 						}
+
+	// 						cacheMap[platform.Name()][genome.Name()] = append(cacheMap[platform.Name()][genome.Name()], TrackInfo{Platform: platform.Name(),
+	// 							Genome:   genome.Name(),
+	// 							PublicId: publicId,
+	// 							Name:     name,
+	// 							Reads:    reads,
+	// 							Stat:     stat})
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	// log.Debug().Msgf("%v", cacheMap)
+
+	// log.Debug().Msgf("---- end ----")
+
+	db := sys.Must(sql.Open("sqlite3", filepath.Join(dir, "tracks.db?mode=ro")))
+	stmtAllTracks := sys.Must(db.Prepare(ALL_TRACKS_SQL))
+	stmtSearchTracks := sys.Must(db.Prepare(SEARCH_TRACKS_SQL))
+	stmtTrackFromId := sys.Must(db.Prepare(TRACK_FROM_ID_SQL))
+
+	return &TracksDB{dir: dir, db: db, stmtAllTracks: stmtAllTracks, stmtSearchTracks: stmtSearchTracks, stmtTrackFromId: stmtTrackFromId}
+}
+
+func (tracksDb *TracksDB) Genomes() ([]string, error) {
+	rows, err := tracksDb.db.Query(GENOMES_SQL)
 
 	if err != nil {
-		log.Fatal().Msgf("error opening %s", dir)
+		return nil, err //fmt.Errorf("there was an error with the database query")
 	}
 
-	log.Debug().Msgf("caching track databases in %s...", dir)
+	defer rows.Close()
 
-	// Sort by name
-	sort.Slice(platformFiles, func(i, j int) bool {
-		return platformFiles[i].Name() < platformFiles[j].Name()
-	})
+	ret := make([]string, 0, 10)
 
-	for _, platform := range platformFiles {
-		if platform.IsDir() {
+	var genome string
 
-			log.Debug().Msgf("found platform %s", platform.Name())
-
-			cacheMap[platform.Name()] = make(map[string][]TrackInfo)
-
-			platformDir := filepath.Join(dir, platform.Name())
-
-			genomeFiles, err := os.ReadDir(platformDir)
-
-			if err != nil {
-				log.Fatal().Msgf("error opening %s", platformDir)
-			}
-
-			sort.Slice(genomeFiles, func(i, j int) bool {
-				return genomeFiles[i].Name() < genomeFiles[j].Name()
-			})
-
-			for _, genome := range genomeFiles {
-				if genome.IsDir() {
-
-					log.Debug().Msgf("found genome %s", genome.Name())
-
-					sampleDir := filepath.Join(dir, platform.Name(), genome.Name())
-
-					sampleFiles, err := os.ReadDir(sampleDir)
-
-					if err != nil {
-						log.Fatal().Msgf("error sample dir %s", sampleDir)
-					}
-
-					cacheMap[platform.Name()][genome.Name()] = make([]TrackInfo, 0, 10)
-
-					// Sort by name
-					sort.Slice(sampleFiles, func(i, j int) bool {
-						return sampleFiles[i].Name() < sampleFiles[j].Name()
-					})
-
-					for _, sample := range sampleFiles {
-						if sample.IsDir() {
-							log.Debug().Msgf("found sample %s", sample.Name())
-
-							path := filepath.Join(dir, platform.Name(), genome.Name(), sample.Name(), "track.db")
-
-							db := sys.Must(sql.Open("sqlite3", path))
-
-							defer db.Close()
-
-							var reads uint
-							var name string
-							var publicId string
-							var stat string
-							err := db.QueryRow(TRACK_SQL).Scan(&publicId, &name, &reads, &stat)
-
-							if err != nil {
-								log.Fatal().Msgf("info not found %s", err)
-							}
-
-							cacheMap[platform.Name()][genome.Name()] = append(cacheMap[platform.Name()][genome.Name()], TrackInfo{Platform: platform.Name(),
-								Genome:   genome.Name(),
-								PublicId: publicId,
-								Name:     name,
-								Reads:    reads,
-								Stat:     stat})
-						}
-					}
-				}
-			}
-		}
-	}
-
-	log.Debug().Msgf("%v", cacheMap)
-
-	log.Debug().Msgf("---- end ----")
-
-	db := sys.Must(sql.Open("sqlite3", filepath.Join(dir, "tracks.db")))
-
-	return &TracksDB{dir: dir, cacheMap: cacheMap, db: db}
-}
-
-func (tracksDb *TracksDB) Platforms() []string {
-	keys := make([]string, 0, len(tracksDb.cacheMap))
-
-	for k := range tracksDb.cacheMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	return keys
-}
-
-func (tracksDb *TracksDB) Genomes(platform string) ([]string, error) {
-	genomes, ok := tracksDb.cacheMap[platform]
-
-	if ok {
-		keys := make([]string, 0, len(genomes))
-
-		for k := range genomes {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-
-		return keys, nil
-	} else {
-		return nil, fmt.Errorf("platform %s not found", platform)
-	}
-}
-
-func (tracksDb *TracksDB) Tracks(platform string, genome string) ([]TrackInfo, error) {
-	genomes, ok := tracksDb.cacheMap[platform]
-
-	if ok {
-		tracks, ok := genomes[genome]
-
-		if ok {
-			return tracks, nil
-		} else {
-			return nil, fmt.Errorf("genome %s not found", genome)
-		}
-	} else {
-		return nil, fmt.Errorf("platform %s not found", platform)
-	}
-}
-
-func (tracksDb *TracksDB) AllTracks() (*AllTracks, error) {
-	platforms := tracksDb.Platforms()
-
-	ret := AllTracks{Name: "Tracks Database", Platforms: make([]TrackPlaform, 0, len(platforms))}
-
-	for _, platform := range platforms {
-
-		genomes, err := tracksDb.Genomes(platform)
+	for rows.Next() {
+		err := rows.Scan(&genome)
 
 		if err != nil {
-			return nil, err
+			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		trackPlatform := TrackPlaform{Name: platform, Genomes: make([]TrackGenome, 0, len(genomes))}
-
-		for _, genome := range genomes {
-			tracks, err := tracksDb.Tracks(platform, genome)
-
-			if err != nil {
-				return nil, err
-			}
-
-			trackGenome := TrackGenome{Name: genome, Tracks: tracks}
-
-			trackPlatform.Genomes = append(trackPlatform.Genomes, trackGenome)
-
-		}
-
-		ret.Platforms = append(ret.Platforms, trackPlatform)
-
+		ret = append(ret, genome)
 	}
 
-	return &ret, nil
+	return ret, nil
+}
+func (tracksDb *TracksDB) Platforms(genome string) ([]string, error) {
+	rows, err := tracksDb.db.Query(PLATFORMS_SQL, genome)
+
+	if err != nil {
+		return nil, err //fmt.Errorf("there was an error with the database query")
+	}
+
+	defer rows.Close()
+
+	ret := make([]string, 0, 10)
+
+	var platform string
+
+	for rows.Next() {
+		err := rows.Scan(&platform)
+
+		if err != nil {
+			return nil, err //fmt.Errorf("there was an error with the database records")
+		}
+
+		ret = append(ret, platform)
+	}
+
+	return ret, nil
 }
 
-func (tracksDb *TracksDB) ReaderFromTrackId(publicId string, binWidth uint) (*TrackReader, error) {
+func (tracksDb *TracksDB) Tracks(genome string, platform string) ([]TrackInfo, error) {
+	rows, err := tracksDb.db.Query(TRACKS_SQL, genome, platform)
 
+	if err != nil {
+		return nil, err //fmt.Errorf("there was an error with the database query")
+	}
+
+	defer rows.Close()
+
+	defer rows.Close()
+
+	ret := make([]TrackInfo, 0, 10)
+
+	var id uint
+	var publicId string
+	var name string
+	var reads uint
+	var stat string
+	var dir string
+
+	for rows.Next() {
+		err := rows.Scan(&id, &publicId, &genome, &platform, &name, &reads, &stat, &dir)
+
+		if err != nil {
+			return nil, err //fmt.Errorf("there was an error with the database records")
+		}
+
+		ret = append(ret, TrackInfo{PublicId: publicId, Genome: genome, Platform: platform, Name: name, Reads: reads, Stat: stat})
+	}
+
+	return ret, nil
+}
+
+func (tracksDb *TracksDB) Search(genome string, query string) ([]TrackInfo, error) {
+	var rows *sql.Rows
+	var err error
+
+	if query != "" {
+		rows, err = tracksDb.stmtSearchTracks.Query(genome, query, fmt.Sprintf("%%%s%%", query))
+	} else {
+		rows, err = tracksDb.stmtAllTracks.Query(genome)
+	}
+
+	if err != nil {
+		return nil, err //fmt.Errorf("there was an error with the database query")
+	}
+
+	defer rows.Close()
+
+	ret := make([]TrackInfo, 0, 10)
+
+	var id uint
+	var publicId string
+	var platform string
+	var name string
+	var reads uint
+	var stat string
+	var dir string
+
+	//id, public_id, genome, platform, name, reads, stat_mode, dir
+
+	for rows.Next() {
+		err := rows.Scan(&id, &publicId, &genome, &platform, &name, &reads, &stat, &dir)
+
+		if err != nil {
+			return nil, err //fmt.Errorf("there was an error with the database records")
+		}
+
+		ret = append(ret, TrackInfo{PublicId: publicId, Genome: genome, Platform: platform, Name: name, Reads: reads, Stat: stat})
+	}
+
+	return ret, nil
+}
+
+func (tracksDb *TracksDB) ReaderFromId(publicId string, binWidth uint) (*TrackReader, error) {
+
+	var id uint
 	var platform string
 	var genome string
 	var name string
@@ -509,13 +576,15 @@ func (tracksDb *TracksDB) ReaderFromTrackId(publicId string, binWidth uint) (*Tr
 	var dir string
 	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, dir FROM tracks WHERE tracks.publicId = ?1`
 
-	err := tracksDb.db.QueryRow(FIND_TRACK_SQL, publicId).Scan(&platform, &genome, &name, &reads, &stat, &dir)
+	err := tracksDb.db.QueryRow(TRACK_FROM_ID_SQL, publicId).Scan(&id, &publicId, &genome, &platform, &name, &reads, &stat, &dir)
 
 	if err != nil {
 		return nil, err
 	}
 
-	track := Track{Platform: platform, Genome: genome, Name: name}
+	track := Track{Genome: genome, Platform: platform, Name: name}
 
-	return NewTrackReader(tracksDb.dir, track, binWidth)
+	dir = filepath.Join(tracksDb.dir, dir)
+
+	return NewTrackReader(dir, track, binWidth)
 }

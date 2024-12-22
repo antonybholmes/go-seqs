@@ -25,22 +25,22 @@ func Dir() string {
 	return instance.Dir()
 }
 
-func Platforms() []string {
-	return instance.Platforms()
+func Genomes() ([]string, error) {
+	return instance.Genomes()
 }
 
-func Genomes(platform string) ([]string, error) {
-	return instance.Genomes(platform)
+func Platforms(genome string) ([]string, error) {
+	return instance.Platforms(genome)
 }
 
 func Tracks(platform string, genome string) ([]tracks.TrackInfo, error) {
 	return instance.Tracks(platform, genome)
 }
 
-func AllTracks() (*tracks.AllTracks, error) {
-	return instance.AllTracks()
+func Search(genome string, query string) ([]tracks.TrackInfo, error) {
+	return instance.Search(genome, query)
 }
 
-func ReaderFromTrackId(publicId string, binWidth uint) (*tracks.TrackReader, error) {
-	return instance.ReaderFromTrackId(publicId, binWidth)
+func ReaderFromId(publicId string, binWidth uint) (*tracks.TrackReader, error) {
+	return instance.ReaderFromId(publicId, binWidth)
 }
