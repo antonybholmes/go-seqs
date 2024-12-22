@@ -50,7 +50,7 @@ const BIN_SQL = `SELECT start, end, reads
 type BinCounts struct {
 	Track    Track         `json:"track"`
 	Location *dna.Location `json:"location"`
-	Bins     []uint        `json:"bins"`
+	Bins     []float64     `json:"bins"`
 	Start    uint          `json:"start"`
 	BinWidth uint          `json:"binWidth"`
 }
@@ -91,9 +91,10 @@ type TrackReader struct {
 	Track    Track
 	BinWidth uint
 	Reads    uint
+	Scale    float64
 }
 
-func NewTrackReader(dir string, track Track, binWidth uint) (*TrackReader, error) {
+func NewTrackReader(dir string, track Track, binWidth uint, scale float64) (*TrackReader, error) {
 
 	path := filepath.Join(dir, "track.db?mode=ro")
 
@@ -134,7 +135,8 @@ func NewTrackReader(dir string, track Track, binWidth uint) (*TrackReader, error
 		Stat:     stat,
 		BinWidth: binWidth,
 		Reads:    reads,
-		Track:    track}, nil
+		Track:    track,
+		Scale:    scale}, nil
 }
 
 func (reader *TrackReader) getPath(location *dna.Location) string {
@@ -171,7 +173,7 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 	var readBlockStart uint
 	var readBlockEnd uint
 	var count uint
-	reads := make([]uint, endBin-startBin+1)
+	reads := make([]float64, endBin-startBin+1)
 	lastBinOfInterest := startBin + uint(len(reads))
 
 	for rows.Next() {
@@ -189,7 +191,18 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 		// endbin is always 1 past the actual end of the bin, i.e. the start of
 		// another bin, therefore we treat it as exclusive
 		for bin := readBlockStart; bin < endBin; bin++ {
-			reads[bin-startBin] = count
+			reads[bin-startBin] = float64(count)
+		}
+	}
+
+	log.Debug().Msgf("scale reads %f", reader.Scale)
+
+	// scale to some hypothetical .e.g. 1,000,000
+	if reader.Scale > 0 {
+		factor := reader.Scale / float64(reader.Reads)
+
+		for i, r := range reads {
+			reads[i] = r * factor
 		}
 	}
 
@@ -565,7 +578,7 @@ func (tracksDb *TracksDB) Search(genome string, query string) ([]TrackInfo, erro
 	return ret, nil
 }
 
-func (tracksDb *TracksDB) ReaderFromId(publicId string, binWidth uint) (*TrackReader, error) {
+func (tracksDb *TracksDB) ReaderFromId(publicId string, binWidth uint, scale float64) (*TrackReader, error) {
 
 	var id uint
 	var platform string
@@ -586,5 +599,5 @@ func (tracksDb *TracksDB) ReaderFromId(publicId string, binWidth uint) (*TrackRe
 
 	dir = filepath.Join(tracksDb.dir, dir)
 
-	return NewTrackReader(dir, track, binWidth)
+	return NewTrackReader(dir, track, binWidth, scale)
 }

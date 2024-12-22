@@ -41,6 +41,6 @@ func Search(genome string, query string) ([]tracks.TrackInfo, error) {
 	return instance.Search(genome, query)
 }
 
-func ReaderFromId(publicId string, binWidth uint) (*tracks.TrackReader, error) {
-	return instance.ReaderFromId(publicId, binWidth)
+func ReaderFromId(publicId string, binWidth uint, scale float64) (*tracks.TrackReader, error) {
+	return instance.ReaderFromId(publicId, binWidth, scale)
 }
