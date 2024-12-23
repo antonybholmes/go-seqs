@@ -2,19 +2,15 @@ genome=hg19
 dir=/home/antony/development/data/modules/seqs/ChIP-seq
 bin_width=128,256,512,1024
 
-bam=/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/CB4_BCL6_RK040/reads/CB4_BCL6_RK040_hg19.sorted.rmdup.bam
-sample=`basename ${bam} | sed -r 's/\..+//'`
-outdir=${dir}/${genome}/${sample}
-python bamtosql.py --sample=${sample} --bam=${bam} --genome=${genome} --widths=${bin_width} --out=${outdir}
-./step2_create_db.sh ${sample} ${outdir}
+cat samples.txt | sed 1d | while read bam
+do
+    #bam=/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/CB4_BCL6_RK040/reads/CB4_BCL6_RK040_hg19.sorted.rmdup.bam
+    sample=`basename ${bam} | sed -r 's/\..+//'`
+    
+    echo ${sample}
+    echo ${bam}
 
-exit(0)
-
-sample=CB4_H3K27Ac_RK043_hg19
-outdir=${dir}/${genome}/${sample}
-bam=/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/CB4_H3K27Ac_RK043/reads/CB4_H3K27Ac_RK043_hg19.sorted.rmdup.bam
-python bamtosql.py --sample=${sample} --bam=${bam} --genome=${genome} --widths=${bin_width} --out=${outdir}
-./step2_create_db.sh ${sample} ${outdir}
-
-exit(0)
-
+    outdir=${dir}/${genome}/${sample}
+    python bamtosql.py --sample=${sample} --bam=${bam} --genome=${genome} --widths=${bin_width} --out=${outdir}
+    ./step2_create_db.sh ${sample} ${outdir}
+done
