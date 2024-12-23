@@ -14,11 +14,12 @@ cat track.sql | sqlite3 ${dir}/track.db
 cat ${dir}/track.sql | sqlite3 ${dir}/track.db
 
 
-for f in `find ${dir} | grep -P 'chr.+sql$' | sort`
+#for f in `find ${dir} | grep -P 'chr.+sql$' | sort`
+for f in `find ${dir} | grep -P 'bin.+sql$' | sort`
 do
 	echo ${f}
 	db=`echo ${f} | sed -r 's/sql/db/'`
 	rm ${db}
-	cat chr.sql | sqlite3 ${db}
+	cat bins.sql | sqlite3 ${db}
 	cat ${f} | sqlite3 ${db}
 done
