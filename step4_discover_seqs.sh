@@ -1,4 +1,4 @@
-dir=data/modules/tracks
+dir=data/modules/seqs
 
 python discover_seqs.py --dir=${dir} 
 
