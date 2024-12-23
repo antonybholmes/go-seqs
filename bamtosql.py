@@ -30,6 +30,7 @@ for w in bin_widths:
     print(sample, genome, w)
     writer = libseq.BinCountWriter(sample, bam, genome, bin_width=w, outdir=outdir)
     writer.write_all_chr_sql()
+    break
 
 # writer = libseq.BinCountWriter("CB4_BCL6_RK040_hg19.sorted.rmdup.bam", "hg19", bin_width=1000)
 # writer.write_all_chr_sql()
