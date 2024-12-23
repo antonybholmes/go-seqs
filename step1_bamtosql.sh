@@ -1,6 +1,6 @@
 genome=hg19
 dir=/home/antony/development/data/modules/seqs/ChIP-seq
-bin_width=128,256,512,1024
+bin_widths=128,256,512,1024
 
 cat samples.txt | sed 1d | while read bam
 do
@@ -11,6 +11,6 @@ do
     echo ${bam}
 
     outdir=${dir}/${genome}/${sample}
-    python bamtosql.py --sample=${sample} --bam=${bam} --genome=${genome} --widths=${bin_width} --out=${outdir}
+    python bamtosql.py --sample=${sample} --bam=${bam} --genome=${genome} --widths=${bin_widths} --out=${outdir}
     ./step2_create_db.sh ${sample} ${outdir}
 done

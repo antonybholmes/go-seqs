@@ -34,7 +34,7 @@ func Platforms(genome string) ([]string, error) {
 }
 
 func Tracks(platform string, genome string) ([]seqs.SeqInfo, error) {
-	return instance.Tracks(platform, genome)
+	return instance.Seqs(platform, genome)
 }
 
 func Search(genome string, query string) ([]seqs.SeqInfo, error) {

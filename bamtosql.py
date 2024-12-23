@@ -26,10 +26,9 @@ outdir = args.out
 
 # lib.encode.encode_sam_16bit(chr_size_file, file, chr, read_length, window)
 
-for w in bin_widths:
-    print(sample, genome, w)
-    writer = libseq.BinCountWriter(sample, bam, genome, bin_width=w, outdir=outdir)
-    writer.write_all_chr_sql()
+print(sample, genome, bin_widths)
+writer = libseq.BinCountWriter(sample, bam, genome, bin_widths=bin_widths, outdir=outdir)
+writer.write_all_chr_sql()
 
 # writer = libseq.BinCountWriter("CB4_BCL6_RK040_hg19.sorted.rmdup.bam", "hg19", bin_width=1000)
 # writer.write_all_chr_sql()

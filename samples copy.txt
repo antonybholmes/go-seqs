@@ -1,4 +1,6 @@
 sample
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/CB4_BCL6_RK040/reads/CB4_BCL6_RK040_hg19.sorted.rmdup.bam
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/CB4_CREBBP_RK041/genome/hg19/hisat2/CB4_CREBBP_RK041_hg19.sorted.rmdup.bam
 /ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/CB4_EP300_RK042/genome/hg19/hisat2/CB4_EP300_RK042_hg19.sorted.rmdup.bam
 /ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/CB4_EZH2_RK058/reads/CB4_EZH2_RK058_hg19.sorted.rmdup.bam
 /ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/CB4_FOXO1_RK059/reads/CB4_FOXO1_RK059_hg19.sorted.rmdup.bam
