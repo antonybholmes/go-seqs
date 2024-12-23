@@ -1,4 +1,4 @@
-module github.com/antonybholmes/go-tracks
+module github.com/antonybholmes/go-seq
 
 go 1.23
 

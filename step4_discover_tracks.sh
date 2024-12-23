@@ -1,6 +1,6 @@
 dir=data/modules/tracks
 
-python discover_tracks.py --dir=${dir} 
+python discover_seqs.py --dir=${dir} 
 
  
 rm ${dir}/tracks.db

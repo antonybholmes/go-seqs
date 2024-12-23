@@ -1,4 +1,4 @@
-package tracks
+package seq
 
 import (
 	"testing"

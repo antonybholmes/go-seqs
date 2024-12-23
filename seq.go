@@ -1,4 +1,4 @@
-package tracks
+package seq
 
 import (
 	"database/sql"
@@ -28,16 +28,16 @@ const TRACKS_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mo
 	WHERE genome = ?1 AND platform = ?2 
 	ORDER BY name`
 
-const ALL_TRACKS_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
+const ALL_SEQS_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
 	FROM tracks 
 	WHERE genome = ?1 
 	ORDER BY genome, platform, name`
 
-const TRACK_FROM_ID_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
+const SEQ_FROM_ID_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
 	FROM tracks 
-	WHERE tracks.public_id = ?1`
+	WHERE public_id = ?1`
 
-const SEARCH_TRACKS_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
+const SEARCH_SEQS_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
 	FROM tracks 
 	WHERE genome = ?1 AND (public_id = ?1 OR platform = ?1 OR name LIKE ?2)
 	ORDER BY genome, platform, name`
@@ -62,7 +62,7 @@ type Track struct {
 	Name     string `json:"name"`
 }
 
-type TrackInfo struct {
+type SeqInfo struct {
 	PublicId string `json:"publicId"`
 	Genome   string `json:"genome"`
 	Platform string `json:"platform"`
@@ -86,7 +86,7 @@ type TrackInfo struct {
 // 	Platforms []TrackPlaform `json:"platforms"`
 // }
 
-type TrackReader struct {
+type SeqReader struct {
 	Dir      string
 	Stat     string
 	Track    Track
@@ -95,7 +95,7 @@ type TrackReader struct {
 	Scale    float64
 }
 
-func NewTrackReader(dir string, track Track, binWidth uint, scale float64) (*TrackReader, error) {
+func NewSeqReader(dir string, track Track, binWidth uint, scale float64) (*SeqReader, error) {
 
 	path := filepath.Join(dir, "track.db?mode=ro")
 
@@ -132,7 +132,7 @@ func NewTrackReader(dir string, track Track, binWidth uint, scale float64) (*Tra
 	// 	return nil, fmt.Errorf("could not count reads")
 	// }
 
-	return &TrackReader{Dir: dir,
+	return &SeqReader{Dir: dir,
 		Stat:     stat,
 		BinWidth: binWidth,
 		Reads:    reads,
@@ -140,12 +140,12 @@ func NewTrackReader(dir string, track Track, binWidth uint, scale float64) (*Tra
 		Scale:    scale}, nil
 }
 
-func (reader *TrackReader) getPath(location *dna.Location) string {
+func (reader *SeqReader) getPath(location *dna.Location) string {
 	return filepath.Join(reader.Dir, fmt.Sprintf("%s_bw%d_%s.db?mode=ro", location.Chr, reader.BinWidth, reader.Track.Genome))
 
 }
 
-func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error) {
+func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
 	path := reader.getPath(location)
 
@@ -340,20 +340,20 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 // 	}, nil
 // }
 
-type TracksDB struct {
+type SeqDB struct {
 	//cacheMap map[string]map[string][]TrackInfo
-	db               *sql.DB
-	dir              string
-	stmtAllTracks    *sql.Stmt
-	stmtSearchTracks *sql.Stmt
-	stmtTrackFromId  *sql.Stmt
+	db             *sql.DB
+	dir            string
+	stmtAllSeqs    *sql.Stmt
+	stmtSearchSeqs *sql.Stmt
+	stmtSeqFromId  *sql.Stmt
 }
 
-func (tracksDb *TracksDB) Dir() string {
+func (tracksDb *SeqDB) Dir() string {
 	return tracksDb.dir
 }
 
-func NewTrackDB(dir string) *TracksDB {
+func NewSeqDB(dir string) *SeqDB {
 	// cacheMap := make(map[string]map[string][]TrackInfo)
 
 	// platformFiles, err := os.ReadDir(dir)
@@ -448,14 +448,15 @@ func NewTrackDB(dir string) *TracksDB {
 	// log.Debug().Msgf("---- end ----")
 
 	db := sys.Must(sql.Open("sqlite3", filepath.Join(dir, "tracks.db?mode=ro")))
-	stmtAllTracks := sys.Must(db.Prepare(ALL_TRACKS_SQL))
-	stmtSearchTracks := sys.Must(db.Prepare(SEARCH_TRACKS_SQL))
-	stmtTrackFromId := sys.Must(db.Prepare(TRACK_FROM_ID_SQL))
 
-	return &TracksDB{dir: dir, db: db, stmtAllTracks: stmtAllTracks, stmtSearchTracks: stmtSearchTracks, stmtTrackFromId: stmtTrackFromId}
+	return &SeqDB{dir: dir,
+		db:             db,
+		stmtAllSeqs:    sys.Must(db.Prepare(ALL_SEQS_SQL)),
+		stmtSearchSeqs: sys.Must(db.Prepare(SEARCH_SEQS_SQL)),
+		stmtSeqFromId:  sys.Must(db.Prepare(SEQ_FROM_ID_SQL))}
 }
 
-func (tracksDb *TracksDB) Genomes() ([]string, error) {
+func (tracksDb *SeqDB) Genomes() ([]string, error) {
 	rows, err := tracksDb.db.Query(GENOMES_SQL)
 
 	if err != nil {
@@ -480,7 +481,7 @@ func (tracksDb *TracksDB) Genomes() ([]string, error) {
 
 	return ret, nil
 }
-func (tracksDb *TracksDB) Platforms(genome string) ([]string, error) {
+func (tracksDb *SeqDB) Platforms(genome string) ([]string, error) {
 	rows, err := tracksDb.db.Query(PLATFORMS_SQL, genome)
 
 	if err != nil {
@@ -506,7 +507,7 @@ func (tracksDb *TracksDB) Platforms(genome string) ([]string, error) {
 	return ret, nil
 }
 
-func (tracksDb *TracksDB) Tracks(genome string, platform string) ([]TrackInfo, error) {
+func (tracksDb *SeqDB) Tracks(genome string, platform string) ([]SeqInfo, error) {
 	rows, err := tracksDb.db.Query(TRACKS_SQL, genome, platform)
 
 	if err != nil {
@@ -517,7 +518,7 @@ func (tracksDb *TracksDB) Tracks(genome string, platform string) ([]TrackInfo, e
 
 	defer rows.Close()
 
-	ret := make([]TrackInfo, 0, 10)
+	ret := make([]SeqInfo, 0, 10)
 
 	var id uint
 	var publicId string
@@ -533,20 +534,20 @@ func (tracksDb *TracksDB) Tracks(genome string, platform string) ([]TrackInfo, e
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		ret = append(ret, TrackInfo{PublicId: publicId, Genome: genome, Platform: platform, Name: name, Reads: reads, Stat: stat})
+		ret = append(ret, SeqInfo{PublicId: publicId, Genome: genome, Platform: platform, Name: name, Reads: reads, Stat: stat})
 	}
 
 	return ret, nil
 }
 
-func (tracksDb *TracksDB) Search(genome string, query string) ([]TrackInfo, error) {
+func (tracksDb *SeqDB) Search(genome string, query string) ([]SeqInfo, error) {
 	var rows *sql.Rows
 	var err error
 
 	if query != "" {
-		rows, err = tracksDb.stmtSearchTracks.Query(genome, query, fmt.Sprintf("%%%s%%", query))
+		rows, err = tracksDb.stmtSearchSeqs.Query(genome, query, fmt.Sprintf("%%%s%%", query))
 	} else {
-		rows, err = tracksDb.stmtAllTracks.Query(genome)
+		rows, err = tracksDb.stmtAllSeqs.Query(genome)
 	}
 
 	if err != nil {
@@ -555,7 +556,7 @@ func (tracksDb *TracksDB) Search(genome string, query string) ([]TrackInfo, erro
 
 	defer rows.Close()
 
-	ret := make([]TrackInfo, 0, 10)
+	ret := make([]SeqInfo, 0, 10)
 
 	var id uint
 	var publicId string
@@ -574,13 +575,13 @@ func (tracksDb *TracksDB) Search(genome string, query string) ([]TrackInfo, erro
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		ret = append(ret, TrackInfo{PublicId: publicId, Genome: genome, Platform: platform, Name: name, Reads: reads, Stat: stat})
+		ret = append(ret, SeqInfo{PublicId: publicId, Genome: genome, Platform: platform, Name: name, Reads: reads, Stat: stat})
 	}
 
 	return ret, nil
 }
 
-func (tracksDb *TracksDB) ReaderFromId(publicId string, binWidth uint, scale float64) (*TrackReader, error) {
+func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float64) (*SeqReader, error) {
 
 	var id uint
 	var platform string
@@ -589,9 +590,9 @@ func (tracksDb *TracksDB) ReaderFromId(publicId string, binWidth uint, scale flo
 	var reads uint
 	var stat string
 	var dir string
-	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, dir FROM tracks WHERE tracks.publicId = ?1`
+	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, dir FROM tracks WHERE seq.publicId = ?1`
 
-	err := tracksDb.db.QueryRow(TRACK_FROM_ID_SQL, publicId).Scan(&id, &publicId, &genome, &platform, &name, &reads, &stat, &dir)
+	err := tracksDb.db.QueryRow(SEQ_FROM_ID_SQL, publicId).Scan(&id, &publicId, &genome, &platform, &name, &reads, &stat, &dir)
 
 	if err != nil {
 		return nil, err
@@ -601,5 +602,5 @@ func (tracksDb *TracksDB) ReaderFromId(publicId string, binWidth uint, scale flo
 
 	dir = filepath.Join(tracksDb.dir, dir)
 
-	return NewTrackReader(dir, track, binWidth, scale)
+	return NewSeqReader(dir, track, binWidth, scale)
 }
