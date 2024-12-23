@@ -1,4 +1,4 @@
-module github.com/antonybholmes/go-seq
+module github.com/antonybholmes/go-seqs
 
 go 1.23
 

@@ -1,4 +1,4 @@
-package seq
+package seqs
 
 import (
 	"testing"
@@ -16,7 +16,7 @@ func TestWithin(t *testing.T) {
 
 	track := Track{Platform: "ChIP-seq", Genome: "hg19", Name: "CB4_BCL6_RK040"}
 
-	reader, err := NewTrackReader("/home/antony/development/data/modules/tracks/", track, 100, 0)
+	reader, err := NewSeqReader("/home/antony/development/data/modules/tracks/", track, 100, 0)
 
 	if err != nil {
 		t.Fatalf(`err %s`, err)
