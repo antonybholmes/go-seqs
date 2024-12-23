@@ -297,7 +297,7 @@ func NewSeqReader(dir string, track Track, binWidth uint, scale float64) (*SeqRe
 }
 
 func (reader *SeqReader) getPath(location *dna.Location) string {
-	return filepath.Join(reader.Dir, fmt.Sprintf("%s_bw%d_%s.db?mode=ro", location.Chr, reader.BinWidth, reader.Track.Genome))
+	return filepath.Join(reader.Dir, fmt.Sprintf("bin%d", reader.BinWidth), fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinWidth, reader.Track.Genome))
 }
 
 func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
