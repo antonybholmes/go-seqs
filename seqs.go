@@ -50,8 +50,8 @@ const BIN_SQL = `SELECT start, end, reads
 type BinCounts struct {
 	Track    Track         `json:"track"`
 	Location *dna.Location `json:"location"`
-	Bins     []float64     `json:"bins"`
-	YMax     float64       `json:"ymax"`
+	Bins     []uint        `json:"bins"`
+	YMax     uint          `json:"ymax"`
 	Start    uint          `json:"start"`
 	BinWidth uint          `json:"binWidth"`
 }
@@ -174,7 +174,7 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	var readBlockStart uint
 	var readBlockEnd uint
 	var count uint
-	reads := make([]float64, endBin-startBin+1)
+	reads := make([]uint, endBin-startBin+1)
 	lastBinOfInterest := startBin + uint(len(reads))
 
 	for rows.Next() {
@@ -192,27 +192,27 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 		// endbin is always 1 past the actual end of the bin, i.e. the start of
 		// another bin, therefore we treat it as exclusive
 		for bin := readBlockStart; bin < endBin; bin++ {
-			reads[bin-startBin] = float64(count)
+			reads[bin-startBin] = count // float64(count)
 		}
 	}
 
 	log.Debug().Msgf("scale reads %f", reader.Scale)
 
 	// scale to some hypothetical .e.g. 1,000,000
-	if reader.Scale > 0 {
-		factor := reader.Scale / float64(reader.Reads)
+	// if reader.Scale > 0 {
+	// 	factor := reader.Scale / float64(reader.Reads)
 
-		for i, r := range reads {
-			reads[i] = r * factor
-		}
-	}
+	// 	for i, r := range reads {
+	// 		reads[i] = r * factor
+	// 	}
+	// }
 
 	return &BinCounts{
 		Track:    reader.Track,
 		Location: location,
 		Start:    startBin*reader.BinWidth + 1,
 		Bins:     reads,
-		YMax:     basemath.MaxFloat64Array(&reads),
+		YMax:     basemath.MaxUintArray(&reads),
 		BinWidth: reader.BinWidth,
 	}, nil
 
