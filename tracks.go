@@ -51,6 +51,7 @@ type BinCounts struct {
 	Track    Track         `json:"track"`
 	Location *dna.Location `json:"location"`
 	Bins     []float64     `json:"bins"`
+	YMax     float64       `json:"ymax"`
 	Start    uint          `json:"start"`
 	BinWidth uint          `json:"binWidth"`
 }
@@ -211,6 +212,7 @@ func (reader *TrackReader) BinCounts(location *dna.Location) (*BinCounts, error)
 		Location: location,
 		Start:    startBin*reader.BinWidth + 1,
 		Bins:     reads,
+		YMax:     basemath.MaxFloat64Array(&reads),
 		BinWidth: reader.BinWidth,
 	}, nil
 
