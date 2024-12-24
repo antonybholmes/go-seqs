@@ -243,12 +243,12 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 }
 
 type SeqReader struct {
-	Dir      string
-	Stat     string
-	Track    Track
-	BinWidth uint
-	Reads    uint
-	Scale    float64
+	Dir     string
+	Stat    string
+	Track   Track
+	BinSize uint
+	Reads   uint
+	Scale   float64
 }
 
 func NewSeqReader(dir string, track Track, binWidth uint, scale float64) (*SeqReader, error) {
@@ -289,15 +289,15 @@ func NewSeqReader(dir string, track Track, binWidth uint, scale float64) (*SeqRe
 	// }
 
 	return &SeqReader{Dir: dir,
-		Stat:     stat,
-		BinWidth: binWidth,
-		Reads:    reads,
-		Track:    track,
-		Scale:    scale}, nil
+		Stat:    stat,
+		BinSize: binWidth,
+		Reads:   reads,
+		Track:   track,
+		Scale:   scale}, nil
 }
 
 func (reader *SeqReader) getPath(location *dna.Location) string {
-	return filepath.Join(reader.Dir, fmt.Sprintf("bin%d", reader.BinWidth), fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinWidth, reader.Track.Genome))
+	return filepath.Join(reader.Dir, fmt.Sprintf("bin%d", reader.BinSize), fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
 }
 
 func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
@@ -315,8 +315,8 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
 	defer db.Close()
 
-	startBin := (location.Start - 1) / reader.BinWidth
-	endBin := (location.End - 1) / reader.BinWidth
+	startBin := (location.Start - 1) / reader.BinSize
+	endBin := (location.End - 1) / reader.BinSize
 
 	rows, err := db.Query(BIN_SQL,
 		startBin,
@@ -365,10 +365,10 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	return &BinCounts{
 		Track:    reader.Track,
 		Location: location,
-		Start:    startBin*reader.BinWidth + 1,
+		Start:    startBin*reader.BinSize + 1,
 		Bins:     reads,
 		YMax:     basemath.MaxUintArray(&reads),
-		BinWidth: reader.BinWidth,
+		BinWidth: reader.BinSize,
 	}, nil
 
 	// var magic uint32
