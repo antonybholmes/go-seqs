@@ -315,8 +315,8 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
 	defer db.Close()
 
-	startBin := (location.Start - 1) / reader.BinSize
-	endBin := (location.End - 1) / reader.BinSize
+	var startBin uint = (location.Start - 1) / reader.BinSize
+	var endBin uint = (location.End - 1) / reader.BinSize
 
 	rows, err := db.Query(BIN_SQL,
 		startBin,
@@ -325,6 +325,8 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	log.Debug().Msgf("strange %v %d %d", location, startBin, endBin)
 
 	var readBlockStart uint
 	var readBlockEnd uint
