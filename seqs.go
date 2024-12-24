@@ -49,7 +49,7 @@ const BIN_SQL = `SELECT start, end, reads
 
 type BinCounts struct {
 	Track    Track         `json:"track"`
-	Location *dna.Location `json:"location"`
+	Location *dna.Location `json:"loc"`
 	Bins     []uint        `json:"bins"`
 	YMax     uint          `json:"ymax"`
 	Start    uint          `json:"start"`
