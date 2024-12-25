@@ -296,13 +296,28 @@ func NewSeqReader(dir string, track Track, binWidth uint, scale float64) (*SeqRe
 		Scale:   scale}, nil
 }
 
-func (reader *SeqReader) getPath(location *dna.Location) string {
-	return filepath.Join(reader.Dir, fmt.Sprintf("bin%d", reader.BinSize), fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
-}
+// func (reader *SeqReader) getPath(location *dna.Location) string {
+// 	return filepath.Join(reader.Dir, fmt.Sprintf("bin%d", reader.BinSize), fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
+// }
 
 func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
-	path := reader.getPath(location)
+	var startBin uint = (location.Start - 1) / reader.BinSize
+	var endBin uint = (location.End - 1) / reader.BinSize
+
+	// we return something for every call, even if data not available
+	ret := BinCounts{
+		Track:    reader.Track,
+		Location: location,
+		Start:    startBin*reader.BinSize + 1,
+		Bins:     make([]uint, endBin-startBin+1),
+		YMax:     0,
+		BinWidth: reader.BinSize,
+	}
+
+	path := filepath.Join(reader.Dir,
+		fmt.Sprintf("bin%d", reader.BinSize),
+		fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
 
 	log.Debug().Msgf("track path %s", path)
 
@@ -310,20 +325,17 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
 	if err != nil {
 		log.Debug().Msgf("error opening %s %s", path, err)
-		return nil, err
+		return &ret, err
 	}
 
 	defer db.Close()
-
-	var startBin uint = (location.Start - 1) / reader.BinSize
-	var endBin uint = (location.End - 1) / reader.BinSize
 
 	rows, err := db.Query(BIN_SQL,
 		startBin,
 		endBin)
 
 	if err != nil {
-		return nil, err
+		return &ret, err
 	}
 
 	log.Debug().Msgf("strange %v %d %d", location, startBin, endBin)
@@ -331,14 +343,14 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	var readBlockStart uint
 	var readBlockEnd uint
 	var count uint
-	reads := make([]uint, endBin-startBin+1)
-	lastBinOfInterest := startBin + uint(len(reads))
+	//reads := make([]uint, endBin-startBin+1)
+	lastBinOfInterest := startBin + uint(len(ret.Bins))
 
 	for rows.Next() {
 		err := rows.Scan(&readBlockStart, &readBlockEnd, &count)
 
 		if err != nil {
-			return nil, err //fmt.Errorf("there was an error with the database records")
+			return &ret, err //fmt.Errorf("there was an error with the database records")
 		}
 
 		// we don't want to load bin data that goes outside our coordinates
@@ -349,11 +361,14 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 		// endbin is always 1 past the actual end of the bin, i.e. the start of
 		// another bin, therefore we treat it as exclusive
 		for bin := readBlockStart; bin < endBin; bin++ {
-			reads[bin-startBin] = count // float64(count)
+			ret.Bins[bin-startBin] = count // float64(count)
 		}
 	}
 
 	log.Debug().Msgf("scale reads %f", reader.Scale)
+
+	// work out ymax
+	ret.YMax = basemath.MaxUintArray(&ret.Bins)
 
 	// scale to some hypothetical .e.g. 1,000,000
 	// if reader.Scale > 0 {
@@ -364,14 +379,9 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	// 	}
 	// }
 
-	return &BinCounts{
-		Track:    reader.Track,
-		Location: location,
-		Start:    startBin*reader.BinSize + 1,
-		Bins:     reads,
-		YMax:     basemath.MaxUintArray(&reads),
-		BinWidth: reader.BinSize,
-	}, nil
+	log.Debug().Msgf("bins %v", ret)
+
+	return &ret, nil
 
 	// var magic uint32
 	// binary.Read(f, binary.LittleEndian, &magic)
