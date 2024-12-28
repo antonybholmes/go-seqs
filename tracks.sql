@@ -10,6 +10,9 @@ CREATE TABLE tracks (
 	reads INTEGER NOT NULL,
 	stat_mode TEXT NOT NULL,
 	dir TEXT NOT NULL,
+	tags TEXT,
+	description TEXT,
 	UNIQUE(platform, genome, public_id, name));
 CREATE INDEX tracks_idx ON tracks(platform, genome, name);
 CREATE INDEX tracks_public_id_idx ON tracks(public_id);
+CREATE INDEX tracks_tags_idx ON tracks(tags);
