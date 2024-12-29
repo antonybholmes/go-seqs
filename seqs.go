@@ -338,8 +338,6 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 		return &ret, err
 	}
 
-	log.Debug().Msgf("strange %v %d %d", location, startBin, endBin)
-
 	var readBlockStart uint
 	var readBlockEnd uint
 	var count uint
@@ -379,7 +377,7 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	// 	}
 	// }
 
-	log.Debug().Msgf("bins %v", ret)
+	//log.Debug().Msgf("bins %v", ret)
 
 	return &ret, nil
 
