@@ -1,0 +1,2 @@
+sample
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/CB4_CREBBP_RK041/genome/hg19/hisat2/CB4_CREBBP_RK041_hg19.sorted.rmdup.bam

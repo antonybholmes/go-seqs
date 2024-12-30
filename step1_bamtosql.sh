@@ -1,6 +1,6 @@
 genome=hg19
 dir=/home/antony/development/data/modules/seqs/ChIP-seq
-bin_widths=64 #128,256,512,1024
+bin_widths=64,128,256,512,1024
 
 cat samples.txt | sed 1d | while read bam
 do

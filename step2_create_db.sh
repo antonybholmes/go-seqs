@@ -19,6 +19,7 @@ for f in `find ${dir} | grep -P 'bin.+sql$' | sort`
 do
 	echo ${f}
 	db=`echo ${f} | sed -r 's/sql/db/'`
+	echo ${db}
 	rm ${db}
 	cat bins.sql | sqlite3 ${db}
 	cat ${f} | sqlite3 ${db}
