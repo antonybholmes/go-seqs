@@ -21,26 +21,28 @@ import (
 const GENOMES_SQL = `SELECT DISTINCT genome FROM tracks ORDER BY genome`
 const PLATFORMS_SQL = `SELECT DISTINCT platform FROM tracks WHERE genome = ?1 ORDER BY platform`
 
-const TRACK_SQL = `SELECT public_id, name, reads, stat_mode FROM track`
+const TRACK_SQL = `SELECT name, reads, stat_mode FROM track`
 
-const TRACKS_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
-	FROM tracks 
+const SELECT_TRACK_SQL = `SELECT id, uuid, genome, platform, dataset, name, reads, stat_mode, dir `
+
+const TRACKS_SQL = SELECT_TRACK_SQL +
+	`FROM tracks 
 	WHERE genome = ?1 AND platform = ?2 
 	ORDER BY name`
 
-const ALL_SEQS_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
-	FROM tracks 
+const ALL_SEQS_SQL = SELECT_TRACK_SQL +
+	`FROM tracks 
 	WHERE genome = ?1 
-	ORDER BY genome, platform, name`
+	ORDER BY genome, platform, dataset, name`
 
-const SEQ_FROM_ID_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
-	FROM tracks 
-	WHERE public_id = ?1`
+const SEQ_FROM_ID_SQL = SELECT_TRACK_SQL +
+	`FROM tracks 
+	WHERE uuid = ?1`
 
-const SEARCH_SEQS_SQL = `SELECT id, public_id, genome, platform, name, reads, stat_mode, dir 
-	FROM tracks 
-	WHERE genome = ?1 AND (public_id = ?1 OR platform = ?1 OR name LIKE ?2)
-	ORDER BY genome, platform, name`
+const SEARCH_SEQS_SQL = SELECT_TRACK_SQL +
+	`FROM tracks 
+	WHERE genome = ?1 AND (uuid = ?1 OR platform = ?1 OR dataset LIKE ?2 OR name LIKE ?2)
+	ORDER BY genome, platform, dataset, name`
 
 const BIN_SQL = `SELECT start, end, reads 
 	FROM bins
@@ -63,9 +65,10 @@ type Track struct {
 }
 
 type SeqInfo struct {
-	PublicId string `json:"publicId"`
+	Uuid     string `json:"uuid"`
 	Genome   string `json:"genome"`
 	Platform string `json:"platform"`
+	Dataset  string `json:"dataset"`
 	Name     string `json:"name"`
 	Stat     string `json:"stat"`
 	Reads    uint   `json:"reads"`
@@ -158,20 +161,21 @@ func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]SeqInfo, error) {
 	ret := make([]SeqInfo, 0, 10)
 
 	var id uint
-	var publicId string
+	var uuid string
+	var dataset string
 	var name string
 	var reads uint
 	var stat string
 	var dir string
 
 	for rows.Next() {
-		err := rows.Scan(&id, &publicId, &genome, &platform, &name, &reads, &stat, &dir)
+		err := rows.Scan(&id, &uuid, &genome, &platform, &dataset, &name, &reads, &stat, &dir)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		ret = append(ret, SeqInfo{PublicId: publicId, Genome: genome, Platform: platform, Name: name, Reads: reads, Stat: stat})
+		ret = append(ret, SeqInfo{Uuid: uuid, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Reads: reads, Stat: stat})
 	}
 
 	return ret, nil
@@ -196,40 +200,50 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]SeqInfo, error) {
 	ret := make([]SeqInfo, 0, 10)
 
 	var id uint
-	var publicId string
+	var uuid string
 	var platform string
+	var dataset string
 	var name string
 	var reads uint
 	var stat string
 	var dir string
 
-	//id, public_id, genome, platform, name, reads, stat_mode, dir
+	//id, uuid, genome, platform, name, reads, stat_mode, dir
 
 	for rows.Next() {
-		err := rows.Scan(&id, &publicId, &genome, &platform, &name, &reads, &stat, &dir)
+		err := rows.Scan(&id, &uuid, &genome, &platform, &dataset, &name, &reads, &stat, &dir)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		ret = append(ret, SeqInfo{PublicId: publicId, Genome: genome, Platform: platform, Name: name, Reads: reads, Stat: stat})
+		ret = append(ret, SeqInfo{Uuid: uuid, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Reads: reads, Stat: stat})
 	}
 
 	return ret, nil
 }
 
-func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float64) (*SeqReader, error) {
+func (tracksDb *SeqDB) ReaderFromId(uuid string, binWidth uint, scale float64) (*SeqReader, error) {
 
 	var id uint
 	var platform string
 	var genome string
+	var dataset string
 	var name string
 	var reads uint
 	var stat string
 	var dir string
 	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, dir FROM tracks WHERE seq.publicId = ?1`
 
-	err := tracksDb.db.QueryRow(SEQ_FROM_ID_SQL, publicId).Scan(&id, &publicId, &genome, &platform, &name, &reads, &stat, &dir)
+	err := tracksDb.db.QueryRow(SEQ_FROM_ID_SQL, uuid).Scan(&id,
+		&uuid,
+		&genome,
+		&platform,
+		&dataset,
+		&name,
+		&reads,
+		&stat,
+		&dir)
 
 	if err != nil {
 		return nil, err
@@ -265,9 +279,8 @@ func NewSeqReader(dir string, track Track, binWidth uint, scale float64) (*SeqRe
 
 	var reads uint
 	var name string
-	var publicId string
 	var stat string
-	err = db.QueryRow(TRACK_SQL).Scan(&publicId, &name, &reads, &stat)
+	err = db.QueryRow(TRACK_SQL).Scan(&name, &reads, &stat)
 
 	if err != nil {
 		return nil, err
