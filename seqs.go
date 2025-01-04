@@ -61,11 +61,12 @@ type BinCounts struct {
 type Track struct {
 	Genome   string `json:"genome"`
 	Platform string `json:"platform"`
+	Dataset  string `json:"dataset"`
 	Name     string `json:"name"`
 }
 
 type SeqInfo struct {
-	Uuid     string `json:"uuid"`
+	Uuid     string `json:"seqId"`
 	Genome   string `json:"genome"`
 	Platform string `json:"platform"`
 	Dataset  string `json:"dataset"`
@@ -249,7 +250,7 @@ func (tracksDb *SeqDB) ReaderFromId(uuid string, binWidth uint, scale float64) (
 		return nil, err
 	}
 
-	track := Track{Genome: genome, Platform: platform, Name: name}
+	track := Track{Genome: genome, Platform: platform, Dataset: dataset, Name: name}
 
 	dir = filepath.Join(tracksDb.dir, dir)
 
