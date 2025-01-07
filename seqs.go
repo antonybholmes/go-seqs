@@ -46,7 +46,7 @@ const SEARCH_SEQS_SQL = SELECT_TRACK_SQL +
 
 const BIN_SQL = `SELECT start, end, reads 
 	FROM bins
- 	WHERE start >= ?1 AND end < ?2
+ 	WHERE start <= ?2 AND end > ?1
 	ORDER BY start`
 
 type BinCounts struct {
@@ -365,19 +365,23 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 			return &ret, err //fmt.Errorf("there was an error with the database records")
 		}
 
+		// if the bin starts before our region of interest, but the end overlaps into it
+		// then we must fix the start to be at least the start bin
+		readBlockStart := basemath.Max(startBin, readBlockStart)
+
 		// we don't want to load bin data that goes outside our coordinates
 		// of interest. A long gapped bin, may end beyond the blocks we are
 		// interested in, so we need to stop the loop short if so.
-		endBin := basemath.UintMin(readBlockEnd, lastBinOfInterest)
+		readBlockEnd := basemath.Min(readBlockEnd, lastBinOfInterest)
 
 		// endbin is always 1 past the actual end of the bin, i.e. the start of
 		// another bin, therefore we treat it as exclusive
-		for bin := readBlockStart; bin < endBin; bin++ {
+		for bin := readBlockStart; bin < readBlockEnd; bin++ {
 			ret.Bins[bin-startBin] = count // float64(count)
 		}
 	}
 
-	log.Debug().Msgf("scale reads %f", reader.Scale)
+	//log.Debug().Msgf("scale reads %f", reader.Scale)
 
 	// work out ymax
 	ret.YMax = basemath.MaxUintArray(&ret.Bins)
