@@ -15,5 +15,5 @@ CREATE TABLE tracks (
 	description TEXT,
 	UNIQUE(platform, genome, dataset, name));
 CREATE INDEX tracks_idx ON tracks(platform, genome, name);
-CREATE INDEX tracks_uuid_idx ON tracks(uuid);
+CREATE INDEX tracks_public_id_idx ON tracks(public_id);
 CREATE INDEX tracks_tags_idx ON tracks(tags);
