@@ -37,11 +37,11 @@ const ALL_SEQS_SQL = SELECT_TRACK_SQL +
 
 const SEQ_FROM_ID_SQL = SELECT_TRACK_SQL +
 	`FROM tracks 
-	WHERE uuid = ?1`
+	WHERE public_id = ?1`
 
 const SEARCH_SEQS_SQL = SELECT_TRACK_SQL +
 	`FROM tracks 
-	WHERE genome = ?1 AND (uuid = ?1 OR platform = ?1 OR dataset LIKE ?2 OR name LIKE ?2)
+	WHERE genome = ?1 AND (public_id = ?1 OR platform = ?1 OR dataset LIKE ?2 OR name LIKE ?2)
 	ORDER BY genome, platform, dataset, name`
 
 const BIN_SQL = `SELECT start, end, reads 
@@ -50,15 +50,18 @@ const BIN_SQL = `SELECT start, end, reads
 	ORDER BY start`
 
 type SeqBin struct {
-	dna.Location
-	Reads uint `json:"reads"`
+	Start uint `json:"s"`
+	End   uint `json:"e"`
+	Reads uint `json:"r"`
 }
 
 type BinCounts struct {
+	Chr string `json:"chr"`
 	//Track    Track         `json:"track"`
 	//Location *dna.Location `json:"loc"`
-	Bins []*SeqBin `json:"bins"`
-	YMax uint      `json:"ymax"`
+	//Bins []*SeqBin `json:"bins"`
+	Bins [][]uint `json:"bins"`
+	YMax uint     `json:"ymax"`
 	//Start    uint          `json:"start"`
 	BinWidth uint `json:"binWidth"`
 }
@@ -263,12 +266,13 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 }
 
 type SeqReader struct {
-	Dir     string
-	Stat    string
-	Track   Track
-	BinSize uint
-	Reads   uint
-	Scale   float64
+	dir             string
+	stat            string
+	track           Track
+	binSize         uint
+	defaultBinCount uint
+	reads           uint
+	scale           float64
 }
 
 func NewSeqReader(dir string, track Track, binWidth uint, scale float64) (*SeqReader, error) {
@@ -307,12 +311,13 @@ func NewSeqReader(dir string, track Track, binWidth uint, scale float64) (*SeqRe
 	// 	return nil, fmt.Errorf("could not count reads")
 	// }
 
-	return &SeqReader{Dir: dir,
-		Stat:    stat,
-		BinSize: binWidth,
-		Reads:   reads,
-		Track:   track,
-		Scale:   scale}, nil
+	return &SeqReader{dir: dir,
+		stat:            stat,
+		binSize:         binWidth,
+		defaultBinCount: binWidth * 4,
+		reads:           reads,
+		track:           track,
+		scale:           scale}, nil
 }
 
 // func (reader *SeqReader) getPath(location *dna.Location) string {
@@ -329,14 +334,15 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 		//Track:    reader.Track,
 		//Location: location,
 		//Start:    startBin*reader.BinSize + 1,
-		Bins:     make([]*SeqBin, 0, 100),
+		Chr:      location.Chr,
+		Bins:     make([][]uint, 0, reader.defaultBinCount),
 		YMax:     0,
-		BinWidth: reader.BinSize,
+		BinWidth: reader.binSize,
 	}
 
-	path := filepath.Join(reader.Dir,
-		fmt.Sprintf("bin%d", reader.BinSize),
-		fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
+	path := filepath.Join(reader.dir,
+		fmt.Sprintf("bin%d", reader.binSize),
+		fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.binSize, reader.track.Genome))
 
 	//log.Debug().Msgf("track path %s", path)
 
@@ -373,7 +379,8 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 			return &ret, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		ret.Bins = append(ret.Bins, &SeqBin{Location: dna.Location{Chr: location.Chr, Start: readStart, End: readEnd}, Reads: reads})
+		// to reduce data overhead, return 3 element array of start, end and read count
+		ret.Bins = append(ret.Bins, []uint{readStart, readEnd, reads}) //&SeqBin{Start: readStart, End: readEnd, Reads: reads})
 
 		// translate to block coordinates
 		//readBlockStart = (readStart - 1) / reader.BinSize
@@ -398,7 +405,7 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	//log.Debug().Msgf("scale reads %f", reader.Scale)
 
 	for _, bin := range ret.Bins {
-		ret.YMax = basemath.Max(ret.YMax, bin.Reads)
+		ret.YMax = basemath.Max(ret.YMax, bin[2])
 	}
 
 	// work out ymax
