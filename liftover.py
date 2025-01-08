@@ -1,0 +1,163 @@
+# -*- coding: utf-8 -*-
+"""
+Encode read counts per base in 2 bytes
+
+@author: Antony Holmes
+"""
+import argparse
+import os
+import sqlite3
+import subprocess
+from nanoid import generate
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--dir", help="input directory")
+parser.add_argument("-o", "--outdir", help="output directory")
+parser.add_argument("-f", "--from_genome", default="grch38", help="from genome")
+parser.add_argument("-t", "--to_genome", default="hg19", help="to genome")
+args = parser.parse_args()
+
+dir = args.dir  # sys.argv[1]
+outdir = args.outdir  # sys.argv[1]
+from_genome = args.from_genome  # sys.argv[1]
+to_genome = args.to_genome  # sys.argv[1]
+
+data = []
+
+for root, dirs, files in os.walk(dir):
+    for filename in files:
+        if filename == "track.db":
+            print(root)
+            genome, platform, dataset, sample = root.split("/")[-4:]
+
+            dataset = dataset.replace("_", " ")
+
+            # filepath = os.path.join(root, filename)
+            print(root, filename, root, platform, genome, dataset, sample)
+
+            conn = sqlite3.connect(os.path.join(root, filename))
+
+            # Create a cursor object
+            cursor = conn.cursor()
+
+            # Execute a query to fetch data
+            cursor.execute(
+                "SELECT public_id, genome, platform, name, stat_mode, reads FROM track"
+            )
+
+            sample_out_dir = os.path.join(
+                outdir, to_genome, platform, dataset.replace(" ", "_"), sample + f"_{to_genome}_liftover"
+            )
+
+            os.makedirs(sample_out_dir, exist_ok=True)
+
+            print(sample_out_dir)
+
+            # Fetch all results
+            result = list(cursor.fetchone())
+
+            result[0] = generate("0123456789abcdefghijklmnopqrstuvwxyz", 12)
+            result[1] = to_genome
+            result[3] += f"_liftover"
+
+            values = ", ".join([f"'{v}'" for v in result])
+            print(values)
+            with open(os.path.join(sample_out_dir, "track.sql"), "w") as f:
+                print(
+                    f"INSERT INTO track (public_id, genome, platform, name, stat_mode, reads) VALUES ({values});",
+                    file=f,
+                )
+
+            conn.close()
+
+        if filename.endswith(".db") and filename != "track.db":
+            genome, platform, dataset, sample, binSize = root.split("/")[-5:]
+
+            # a bin file to convert
+            print(filename)
+
+            sample_out_dir = os.path.join(
+                outdir, to_genome, platform, dataset, sample + f"_{to_genome}_liftover", binSize
+            )
+
+            os.makedirs(sample_out_dir, exist_ok=True)
+
+            out = os.path.join(sample_out_dir, filename.replace(".db", ".sql").replace(from_genome, to_genome))
+
+            with open(os.path.join(outdir, "track.sql"), "w") as f:
+                print(
+                    f"INSERT INTO tracks (public_id, genome, platform, name, stat_mode, reads) VALUES ({values});",
+                    file=f,
+                )
+
+            conn = sqlite3.connect(os.path.join(root, filename))
+
+            # Create a cursor object
+            cursor = conn.cursor()
+
+            # Execute a query to fetch data
+            cursor.execute(
+                "SELECT genome, platform, name, chr, bin_width, stat_mode, reads FROM track"
+            )
+
+            result = list(cursor.fetchone())
+
+            result[2] += f"_{to_genome}_liftover"
+
+            chr = result[3]
+
+            values = ", ".join([f"'{v}'" for v in result])
+
+            cursor.execute("SELECT start, end, reads FROM bins")
+
+            rows = cursor.fetchall()
+
+            with open("tmp.bed", "w") as f:
+
+                for row in rows:
+                    start = row[0]
+                    end = row[1]
+                    reads = row[2]
+
+                    print(
+                        f"{chr}\t{start}\t{end}\t{reads}",
+                        file=f,
+                    )
+
+            cursor.close()
+
+            # /ifs/scratch/cancer/Lab_RDF/ngs/tools/ucsc/liftOver tmp.bed /ifs/scratch/cancer/Lab_RDF/ngs/references/ucsc/liftover/hg38ToHg19.over.chain tmp1.bed unmapped
+
+            res = subprocess.run(
+                [
+                    "/ifs/scratch/cancer/Lab_RDF/ngs/tools/ucsc/liftOver",
+                    "tmp.bed",
+                    "/ifs/scratch/cancer/Lab_RDF/ngs/references/ucsc/liftover/hg38ToHg19.over.chain",
+                    f"tmp_{to_genome}.bed",
+                    "unmapped",
+                ]
+            )
+
+            if res.returncode == 0:
+                print("Command succeeded")
+
+                with open(out, "w") as f:
+                    print(
+                        f"INSERT INTO track (genome, platform, name, chr, bin_width, stat_mode, reads) VALUES ({values});",
+                        file=f,
+                    )
+
+                    print("BEGIN TRANSACTION;", file=f)
+
+                    with open(f"tmp_{to_genome}.bed", "r") as fin:
+                        for line in fin:
+                            tokens = line.strip().split("\t")
+
+                            print(
+                                f"INSERT INTO bins (start, end, reads) VALUES ({tokens[1]}, {tokens[2]}, {tokens[3]});",
+                                file=f,
+                            )
+
+                    print("COMMIT;", file=f)
+
+            

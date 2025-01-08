@@ -2,7 +2,7 @@ genome=hg19
 dir=/home/antony/development/data/modules/seqs/${genome}/ChIP-seq
 bin_widths=64,128,256,512,1024
 
-cat samples.txt | sed 1d | grep -v '#'| while read line
+cat samples2.txt | sed 1d | while read line
 do
     bam=`echo "${line}" | cut -f1`
     dataset=`echo "${line}" | cut -f2`
