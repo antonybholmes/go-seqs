@@ -7,5 +7,5 @@ CREATE TABLE track (
 	platform TEXT NOT NULL,
 	genome TEXT NOT NULL,
 	name TEXT NOT NULL,
-	reads INTEGER NOT NULL,
-	stat_mode TEXT NOT NULL);
+	stat_mode TEXT NOT NULL,
+	reads INTEGER NOT NULL);

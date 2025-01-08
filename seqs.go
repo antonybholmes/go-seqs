@@ -23,7 +23,7 @@ const PLATFORMS_SQL = `SELECT DISTINCT platform FROM tracks WHERE genome = ?1 OR
 
 const TRACK_SQL = `SELECT name, reads, stat_mode FROM track`
 
-const SELECT_TRACK_SQL = `SELECT id, uuid, genome, platform, dataset, name, reads, stat_mode, dir `
+const SELECT_TRACK_SQL = `SELECT id, public_id, genome, platform, dataset, name, reads, stat_mode, dir `
 
 const TRACKS_SQL = SELECT_TRACK_SQL +
 	`FROM tracks 
@@ -46,16 +46,21 @@ const SEARCH_SEQS_SQL = SELECT_TRACK_SQL +
 
 const BIN_SQL = `SELECT start, end, reads 
 	FROM bins
- 	WHERE start <= ?2 AND end > ?1
+ 	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
+type SeqBin struct {
+	dna.Location
+	Reads uint `json:"reads"`
+}
+
 type BinCounts struct {
-	Track    Track         `json:"track"`
-	Location *dna.Location `json:"loc"`
-	Bins     []uint        `json:"bins"`
-	YMax     uint          `json:"ymax"`
-	Start    uint          `json:"start"`
-	BinWidth uint          `json:"binWidth"`
+	//Track    Track         `json:"track"`
+	//Location *dna.Location `json:"loc"`
+	Bins []*SeqBin `json:"bins"`
+	YMax uint      `json:"ymax"`
+	//Start    uint          `json:"start"`
+	BinWidth uint `json:"binWidth"`
 }
 
 type Track struct {
@@ -66,7 +71,7 @@ type Track struct {
 }
 
 type SeqInfo struct {
-	Uuid     string `json:"seqId"`
+	PublicId string `json:"seqId"`
 	Genome   string `json:"genome"`
 	Platform string `json:"platform"`
 	Dataset  string `json:"dataset"`
@@ -162,7 +167,7 @@ func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]SeqInfo, error) {
 	ret := make([]SeqInfo, 0, 10)
 
 	var id uint
-	var uuid string
+	var publicId string
 	var dataset string
 	var name string
 	var reads uint
@@ -170,13 +175,13 @@ func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]SeqInfo, error) {
 	var dir string
 
 	for rows.Next() {
-		err := rows.Scan(&id, &uuid, &genome, &platform, &dataset, &name, &reads, &stat, &dir)
+		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &stat, &dir)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		ret = append(ret, SeqInfo{Uuid: uuid, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Reads: reads, Stat: stat})
+		ret = append(ret, SeqInfo{PublicId: publicId, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Reads: reads, Stat: stat})
 	}
 
 	return ret, nil
@@ -201,7 +206,7 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]SeqInfo, error) {
 	ret := make([]SeqInfo, 0, 10)
 
 	var id uint
-	var uuid string
+	var publicId string
 	var platform string
 	var dataset string
 	var name string
@@ -212,19 +217,19 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]SeqInfo, error) {
 	//id, uuid, genome, platform, name, reads, stat_mode, dir
 
 	for rows.Next() {
-		err := rows.Scan(&id, &uuid, &genome, &platform, &dataset, &name, &reads, &stat, &dir)
+		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &stat, &dir)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		ret = append(ret, SeqInfo{Uuid: uuid, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Reads: reads, Stat: stat})
+		ret = append(ret, SeqInfo{PublicId: publicId, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Reads: reads, Stat: stat})
 	}
 
 	return ret, nil
 }
 
-func (tracksDb *SeqDB) ReaderFromId(uuid string, binWidth uint, scale float64) (*SeqReader, error) {
+func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float64) (*SeqReader, error) {
 
 	var id uint
 	var platform string
@@ -236,8 +241,8 @@ func (tracksDb *SeqDB) ReaderFromId(uuid string, binWidth uint, scale float64) (
 	var dir string
 	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, dir FROM tracks WHERE seq.publicId = ?1`
 
-	err := tracksDb.db.QueryRow(SEQ_FROM_ID_SQL, uuid).Scan(&id,
-		&uuid,
+	err := tracksDb.db.QueryRow(SEQ_FROM_ID_SQL, publicId).Scan(&id,
+		&publicId,
 		&genome,
 		&platform,
 		&dataset,
@@ -316,15 +321,15 @@ func NewSeqReader(dir string, track Track, binWidth uint, scale float64) (*SeqRe
 
 func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
-	var startBin uint = (location.Start - 1) / reader.BinSize
-	var endBin uint = (location.End - 1) / reader.BinSize
+	//var startBin uint = (location.Start - 1) / reader.BinSize
+	//var endBin uint = (location.End - 1) / reader.BinSize
 
 	// we return something for every call, even if data not available
 	ret := BinCounts{
-		Track:    reader.Track,
-		Location: location,
-		Start:    startBin*reader.BinSize + 1,
-		Bins:     make([]uint, endBin-startBin+1),
+		//Track:    reader.Track,
+		//Location: location,
+		//Start:    startBin*reader.BinSize + 1,
+		Bins:     make([]*SeqBin, 0, 100),
 		YMax:     0,
 		BinWidth: reader.BinSize,
 	}
@@ -333,7 +338,7 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 		fmt.Sprintf("bin%d", reader.BinSize),
 		fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
 
-	log.Debug().Msgf("track path %s", path)
+	//log.Debug().Msgf("track path %s", path)
 
 	db, err := sql.Open("sqlite3", path)
 
@@ -345,46 +350,59 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	defer db.Close()
 
 	rows, err := db.Query(BIN_SQL,
-		startBin,
-		endBin)
+		location.Start, //	startBin,
+		location.End)   ///endBin)
 
 	if err != nil {
 		return &ret, err
 	}
 
-	var readBlockStart uint
-	var readBlockEnd uint
-	var count uint
+	var readStart uint
+	var readEnd uint
+	//var readBlockStart uint
+	//var readBlockEnd uint
+	var reads uint
 	//reads := make([]uint, endBin-startBin+1)
-	lastBinOfInterest := startBin + uint(len(ret.Bins))
+	//lastBinOfInterest := startBin + uint(len(ret.Bins))
 
 	for rows.Next() {
-		err := rows.Scan(&readBlockStart, &readBlockEnd, &count)
+		// read the location
+		err := rows.Scan(&readStart, &readEnd, &reads)
 
 		if err != nil {
 			return &ret, err //fmt.Errorf("there was an error with the database records")
 		}
 
+		ret.Bins = append(ret.Bins, &SeqBin{Location: dna.Location{Chr: location.Chr, Start: readStart, End: readEnd}, Reads: reads})
+
+		// translate to block coordinates
+		//readBlockStart = (readStart - 1) / reader.BinSize
+		//readBlockEnd = (readEnd - 1) / reader.BinSize
+
 		// if the bin starts before our region of interest, but the end overlaps into it
 		// then we must fix the start to be at least the start bin
-		readBlockStart := basemath.Max(startBin, readBlockStart)
+		//readBlockStart := basemath.Max(startBin, readBlockStart)
 
 		// we don't want to load bin data that goes outside our coordinates
 		// of interest. A long gapped bin, may end beyond the blocks we are
 		// interested in, so we need to stop the loop short if so.
-		readBlockEnd := basemath.Min(readBlockEnd, lastBinOfInterest)
+		//readBlockEnd := basemath.Min(readBlockEnd, lastBinOfInterest)
 
 		// endbin is always 1 past the actual end of the bin, i.e. the start of
 		// another bin, therefore we treat it as exclusive
-		for bin := readBlockStart; bin < readBlockEnd; bin++ {
-			ret.Bins[bin-startBin] = count // float64(count)
-		}
+		//for bin := readBlockStart; bin < readBlockEnd; bin++ {
+		//	ret.Bins[bin-startBin] = count // float64(count)
+		//}
 	}
 
 	//log.Debug().Msgf("scale reads %f", reader.Scale)
 
+	for _, bin := range ret.Bins {
+		ret.YMax = basemath.Max(ret.YMax, bin.Reads)
+	}
+
 	// work out ymax
-	ret.YMax = basemath.MaxUintArray(&ret.Bins)
+	//ret.YMax = basemath.MaxUintArray(&ret.Bins)
 
 	// scale to some hypothetical .e.g. 1,000,000
 	// if reader.Scale > 0 {

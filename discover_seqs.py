@@ -57,6 +57,6 @@ with open(os.path.join(dir, "tracks.sql"), "w") as f:
     print("BEGIN TRANSACTION;", file=f)
     for row in data:
         values  = ', '.join([f"'{v}'" for v in row])
-        print(f"INSERT INTO tracks (genome, platform, name, reads, stat_mode, uuid, dataset, dir, tags) VALUES ({values});", file=f)
+        print(f"INSERT INTO tracks (genome, platform, name, reads, stat_mode, public_id, dataset, dir, tags) VALUES ({values});", file=f)
 
     print("COMMIT;", file=f)

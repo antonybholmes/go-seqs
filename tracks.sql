@@ -3,7 +3,7 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE tracks (
 	id INTEGER PRIMARY KEY ASC,
-	uuid TEXT NOT NULL,
+	public_id TEXT NOT NULL,
 	genome TEXT NOT NULL,
 	platform TEXT NOT NULL,
 	dataset TEXT NOT NULL,

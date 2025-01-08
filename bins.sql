@@ -8,7 +8,8 @@ CREATE TABLE track (
 	name TEXT NOT NULL,
 	chr TEXT NOT NULL,
 	bin_width INTEGER NOT NULL,
-	stat_mode TEXT NOT NULL);
+	stat_mode TEXT NOT NULL,
+	reads INTEGER NOT NULL);
 
 -- CREATE TABLE track (
 	-- id INTEGER PRIMARY KEY ASC,
