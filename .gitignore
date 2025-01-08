@@ -26,5 +26,5 @@ go-edb-api
 
 data/
 
-# *.bed
-# unmapped
+*.bed
+unmapped
