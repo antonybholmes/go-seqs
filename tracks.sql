@@ -9,7 +9,6 @@ CREATE TABLE tracks (
 	dataset TEXT NOT NULL,
 	name TEXT NOT NULL,
 	reads INTEGER NOT NULL,
-	stat_mode TEXT NOT NULL,
 	dir TEXT NOT NULL,
 	tags TEXT,
 	description TEXT,

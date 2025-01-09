@@ -13,9 +13,18 @@ rm ${dir}/track.db
 cat track.sql | sqlite3 ${dir}/track.db
 cat ${dir}/track.sql | sqlite3 ${dir}/track.db
 
+# for f in `find ${dir} | grep -P 'track_bin.+sql$' | sort`
+# do
+# 	echo ${f}
+# 	db=`echo ${f} | sed -r 's/sql/db/'`
+# 	echo ${db}
+# 	rm ${db}
+# 	cat bin_group.sql | sqlite3 ${db}
+# 	cat ${f} | sqlite3 ${db}
+# done
 
 #for f in `find ${dir} | grep -P 'chr.+sql$' | sort`
-for f in `find ${dir} | grep -P 'bin.+sql$' | sort`
+for f in `find ${dir} | grep -P 'chr.+bin.+sql$' | grep -v 'track_bin' | sort`
 do
 	echo ${f}
 	db=`echo ${f} | sed -r 's/sql/db/'`

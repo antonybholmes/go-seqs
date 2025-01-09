@@ -1,0 +1,10 @@
+sample	bam
+LZ_110922_NR3C1_KC033	/ifs/scratch/cancer/Lab_RDF/ngs/cut_and_run/data/human/rdf/grch38/nr3c1_patient2_clarissa/align/LZ_110922_NR3C1_KC033/genome/grch38/6.aligned.sorted.mapped.paired.bam
+LZ_011123_NR3C1_KC043	/ifs/scratch/cancer/Lab_RDF/ngs/cut_and_run/data/human/rdf/grch38/nr3c1_patient2_clarissa/align/LZ_011123_NR3C1_KC043/genome/grch38/6.aligned.sorted.mapped.paired.bam
+GC_011123_NR3C1_KC036	/ifs/scratch/cancer/Lab_RDF/ngs/cut_and_run/data/human/rdf/grch38/nr3c1_patient2_clarissa/align/GC_011123_NR3C1_KC036/genome/grch38/6.aligned.sorted.mapped.paired.bam
+GC_110922_NR3C1_KC027	/ifs/scratch/cancer/Lab_RDF/ngs/cut_and_run/data/human/rdf/grch38/nr3c1_patient2_clarissa/align/GC_110922_NR3C1_KC027/genome/grch38/6.aligned.sorted.mapped.paired.bam
+DZ_110922_NR3C1_KC030	/ifs/scratch/cancer/Lab_RDF/ngs/cut_and_run/data/human/rdf/grch38/nr3c1_patient2_clarissa/align/DZ_110922_NR3C1_KC030/genome/grch38/6.aligned.sorted.mapped.paired.bam
+DZ_011123_NR3C1_KC040	/ifs/scratch/cancer/Lab_RDF/ngs/cut_and_run/data/human/rdf/grch38/nr3c1_patient2_clarissa/align/DZ_011123_NR3C1_KC040/genome/grch38/6.aligned.sorted.mapped.paired.bam
+LZ_081623_NR3C1_KC50	/ifs/scratch/cancer/Lab_RDF/ngs/cut_and_run/data/human/rdf/grch38/nr3c1_patient3_dz_gc_lz_clarissa/align/LZ_081623_NR3C1_KC50/genome/grch38/6.aligned.sorted.mapped.paired.bam
+GC_081623_NR3C1_KC46	/ifs/scratch/cancer/Lab_RDF/ngs/cut_and_run/data/human/rdf/grch38/nr3c1_patient3_dz_gc_lz_clarissa/align/GC_081623_NR3C1_KC46/genome/grch38/6.aligned.sorted.mapped.paired.bam
+DZ_081623_NR3C1_KC48	/ifs/scratch/cancer/Lab_RDF/ngs/cut_and_run/data/human/rdf/grch38/nr3c1_patient3_dz_gc_lz_clarissa/align/DZ_081623_NR3C1_KC48/genome/grch38/6.aligned.sorted.mapped.paired.bam
