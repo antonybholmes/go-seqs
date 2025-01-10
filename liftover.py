@@ -23,8 +23,11 @@ from_genome = args.from_genome  # sys.argv[1]
 to_genome = args.to_genome  # sys.argv[1]
 
 data = []
+publicId = ""
 
 for root, dirs, files in os.walk(dir):
+    dirs.sort()
+    files.sort()
     for filename in files:
         if filename == "track.db":
             print(root)
@@ -41,12 +44,14 @@ for root, dirs, files in os.walk(dir):
             cursor = conn.cursor()
 
             # Execute a query to fetch data
-            cursor.execute(
-                "SELECT public_id, genome, platform, name, reads FROM track"
-            )
+            cursor.execute("SELECT public_id, genome, platform, name, reads FROM track")
 
             sample_out_dir = os.path.join(
-                outdir, to_genome, platform, dataset.replace(" ", "_"), sample + f"_{to_genome}_liftover"
+                outdir,
+                to_genome,
+                platform,
+                dataset.replace(" ", "_"),
+                sample + f"_{to_genome}_liftover",
             )
 
             os.makedirs(sample_out_dir, exist_ok=True)
@@ -56,7 +61,8 @@ for root, dirs, files in os.walk(dir):
             # Fetch all results
             result = list(cursor.fetchone())
 
-            result[0] = generate("0123456789abcdefghijklmnopqrstuvwxyz", 12)
+            publicId = generate("0123456789abcdefghijklmnopqrstuvwxyz", 12)
+            result[0] = publicId
             result[1] = to_genome
             result[3] += f"_liftover"
 
@@ -74,15 +80,23 @@ for root, dirs, files in os.walk(dir):
             genome, platform, dataset, sample, binSize = root.split("/")[-5:]
 
             # a bin file to convert
-            print(filename)
+            # print(filename)
 
             sample_out_dir = os.path.join(
-                outdir, to_genome, platform, dataset, sample + f"_{to_genome}_liftover", binSize
+                outdir,
+                to_genome,
+                platform,
+                dataset,
+                sample + f"_{to_genome}_liftover",
+                binSize,
             )
 
             os.makedirs(sample_out_dir, exist_ok=True)
 
-            out = os.path.join(sample_out_dir, filename.replace(".db", ".sql").replace(from_genome, to_genome))
+            out = os.path.join(
+                sample_out_dir,
+                filename.replace(".db", ".sql").replace(from_genome, to_genome),
+            )
 
             conn = sqlite3.connect(os.path.join(root, filename))
 
@@ -96,9 +110,12 @@ for root, dirs, files in os.walk(dir):
 
             result = list(cursor.fetchone())
 
+            # give it a new id
+            result[0] = publicId
+
             result[2] += f"_{to_genome}_liftover"
 
-            chr = result[3]
+            chr = result[4]
 
             values = ", ".join([f"'{v}'" for v in result])
 
@@ -129,11 +146,13 @@ for root, dirs, files in os.walk(dir):
                     "/ifs/scratch/cancer/Lab_RDF/ngs/references/ucsc/liftover/hg38ToHg19.over.chain",
                     f"tmp_{to_genome}.bed",
                     "unmapped",
-                ]
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
 
             if res.returncode == 0:
-                print("Command succeeded")
+                # print("Command succeeded")
 
                 with open(out, "w") as f:
                     print(
@@ -143,15 +162,21 @@ for root, dirs, files in os.walk(dir):
 
                     print("BEGIN TRANSACTION;", file=f)
 
+                    used = set()
+
                     with open(f"tmp_{to_genome}.bed", "r") as fin:
                         for line in fin:
                             tokens = line.strip().split("\t")
+                            
+                            # if starts resolve to same location, keep the first
+                            if tokens[1] in used:
+                                continue
 
                             print(
                                 f"INSERT INTO bins (start, end, reads) VALUES ({tokens[1]}, {tokens[2]}, {tokens[3]});",
                                 file=f,
                             )
 
-                    print("COMMIT;", file=f)
+                            used.add(tokens[1])
 
-            
+                    print("COMMIT;", file=f)

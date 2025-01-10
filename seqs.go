@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	basemath "github.com/antonybholmes/go-basemath"
@@ -191,13 +192,16 @@ func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
+		tagList := strings.Split(tags, ",")
+		sort.Strings(tagList)
+
 		ret = append(ret, Track{PublicId: publicId,
 			Genome:   genome,
 			Platform: platform,
 			Dataset:  dataset,
 			Name:     name,
 			Reads:    reads,
-			Tags:     strings.Split(tags, ",")})
+			Tags:     tagList})
 	}
 
 	return ret, nil
@@ -239,13 +243,16 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]Track, error) {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
+		tagList := strings.Split(tags, ",")
+		sort.Strings(tagList)
+
 		ret = append(ret, Track{PublicId: publicId,
 			Genome:   genome,
 			Platform: platform,
 			Dataset:  dataset,
 			Name:     name,
 			Reads:    reads,
-			Tags:     strings.Split(tags, ",")})
+			Tags:     tagList})
 	}
 
 	return ret, nil
@@ -278,7 +285,10 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 		return nil, err
 	}
 
-	track := Track{Genome: genome, Platform: platform, Dataset: dataset, Name: name, Tags: strings.Split(tags, ",")}
+	tagList := strings.Split(tags, ",")
+	sort.Strings(tagList)
+
+	track := Track{Genome: genome, Platform: platform, Dataset: dataset, Name: name, Tags: tagList}
 
 	dir = filepath.Join(tracksDb.dir, dir)
 
