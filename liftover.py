@@ -42,7 +42,7 @@ for root, dirs, files in os.walk(dir):
 
             # Execute a query to fetch data
             cursor.execute(
-                "SELECT public_id, genome, platform, name, stat_mode, reads FROM track"
+                "SELECT public_id, genome, platform, name, reads FROM track"
             )
 
             sample_out_dir = os.path.join(
@@ -64,7 +64,7 @@ for root, dirs, files in os.walk(dir):
             print(values)
             with open(os.path.join(sample_out_dir, "track.sql"), "w") as f:
                 print(
-                    f"INSERT INTO track (public_id, genome, platform, name, stat_mode, reads) VALUES ({values});",
+                    f"INSERT INTO track (public_id, genome, platform, name, reads) VALUES ({values});",
                     file=f,
                 )
 
@@ -84,12 +84,6 @@ for root, dirs, files in os.walk(dir):
 
             out = os.path.join(sample_out_dir, filename.replace(".db", ".sql").replace(from_genome, to_genome))
 
-            with open(os.path.join(outdir, "track.sql"), "w") as f:
-                print(
-                    f"INSERT INTO tracks (public_id, genome, platform, name, stat_mode, reads) VALUES ({values});",
-                    file=f,
-                )
-
             conn = sqlite3.connect(os.path.join(root, filename))
 
             # Create a cursor object
@@ -97,7 +91,7 @@ for root, dirs, files in os.walk(dir):
 
             # Execute a query to fetch data
             cursor.execute(
-                "SELECT genome, platform, name, chr, bin_width, stat_mode, reads FROM track"
+                "SELECT public_id, genome, platform, name, chr, bin_width, reads, bpm_scale_factor FROM track"
             )
 
             result = list(cursor.fetchone())
@@ -143,7 +137,7 @@ for root, dirs, files in os.walk(dir):
 
                 with open(out, "w") as f:
                     print(
-                        f"INSERT INTO track (genome, platform, name, chr, bin_width, stat_mode, reads) VALUES ({values});",
+                        f"INSERT INTO track (public_id, genome, platform, name, chr, bin_width, reads, bpm_scale_factor) VALUES ({values});",
                         file=f,
                     )
 

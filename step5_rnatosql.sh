@@ -10,7 +10,7 @@ do
     echo ${sample}
     echo ${bam}
 
-    outdir=${dir}/${sample}
+    outdir=${dir}/RDF_Lab/${sample}
     python bamtosql.py --sample=${sample} --bam=${bam} --genome=${genome} --widths=${bin_widths} --out=${outdir} --platform="RNA-seq"
     ./step2_create_db.sh ${sample} ${outdir}
     #break

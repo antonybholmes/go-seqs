@@ -32,6 +32,8 @@ paired = args.paired
 
 # lib.encode.encode_sam_16bit(chr_size_file, file, chr, read_length, window)
 
+ 
+
 print(sample, genome, bin_widths)
 publicId = generate("0123456789abcdefghijklmnopqrstuvwxyz", 12)
 writer = libseq.BinCountWriter(publicId, sample, bam, genome, bin_widths=bin_widths, platform=platform, outdir=outdir)
