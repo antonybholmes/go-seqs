@@ -84,8 +84,8 @@ type Track struct {
 	Platform string   `json:"platform"`
 	Dataset  string   `json:"dataset"`
 	Name     string   `json:"name"`
-	Reads    uint     `json:"reads"`
 	Tags     []string `json:"tags"`
+	Reads    uint     `json:"reads"`
 }
 
 type SeqDB struct {
