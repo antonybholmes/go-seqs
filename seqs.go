@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	basemath "github.com/antonybholmes/go-basemath"
 	"github.com/antonybholmes/go-dna"
@@ -21,9 +22,9 @@ import (
 const GENOMES_SQL = `SELECT DISTINCT genome FROM tracks ORDER BY genome`
 const PLATFORMS_SQL = `SELECT DISTINCT platform FROM tracks WHERE genome = ?1 ORDER BY platform`
 
-const TRACK_SQL = `SELECT name, reads FROM track`
+//const TRACK_SQL = `SELECT name, reads FROM track`
 
-const SELECT_TRACK_SQL = `SELECT id, public_id, genome, platform, dataset, name, reads, dir `
+const SELECT_TRACK_SQL = `SELECT id, public_id, genome, platform, dataset, name, reads, dir, tags `
 
 const TRACKS_SQL = SELECT_TRACK_SQL +
 	`FROM tracks 
@@ -69,20 +70,21 @@ type BinCounts struct {
 	Bpm      float32 `json:"bpmScaleFactor"`
 }
 
-type Track struct {
-	Genome   string `json:"genome"`
-	Platform string `json:"platform"`
-	Dataset  string `json:"dataset"`
-	Name     string `json:"name"`
-}
+// type Track struct {
+// 	Genome   string `json:"genome"`
+// 	Platform string `json:"platform"`
+// 	Dataset  string `json:"dataset"`
+// 	Name     string `json:"name"`
+// }
 
-type SeqInfo struct {
-	PublicId string `json:"seqId"`
-	Genome   string `json:"genome"`
-	Platform string `json:"platform"`
-	Dataset  string `json:"dataset"`
-	Name     string `json:"name"`
-	Reads    uint   `json:"reads"`
+type Track struct {
+	PublicId string   `json:"seqId"`
+	Genome   string   `json:"genome"`
+	Platform string   `json:"platform"`
+	Dataset  string   `json:"dataset"`
+	Name     string   `json:"name"`
+	Reads    uint     `json:"reads"`
+	Tags     []string `json:"tags"`
 }
 
 type SeqDB struct {
@@ -98,11 +100,14 @@ func (tracksDb *SeqDB) Dir() string {
 }
 
 func NewSeqDB(dir string) *SeqDB {
+	log.Debug().Msgf("Load db: %s", filepath.Join(dir, "tracks.db?mode=ro"))
 	db := sys.Must(sql.Open("sqlite3", filepath.Join(dir, "tracks.db?mode=ro")))
+
+	x := sys.Must(db.Prepare(ALL_SEQS_SQL))
 
 	return &SeqDB{dir: dir,
 		db:             db,
-		stmtAllSeqs:    sys.Must(db.Prepare(ALL_SEQS_SQL)),
+		stmtAllSeqs:    x,
 		stmtSearchSeqs: sys.Must(db.Prepare(SEARCH_SEQS_SQL)),
 		stmtSeqFromId:  sys.Must(db.Prepare(SEQ_FROM_ID_SQL))}
 }
@@ -158,7 +163,7 @@ func (tracksDb *SeqDB) Platforms(genome string) ([]string, error) {
 	return ret, nil
 }
 
-func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]SeqInfo, error) {
+func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
 	rows, err := tracksDb.db.Query(TRACKS_SQL, genome, platform)
 
 	if err != nil {
@@ -169,7 +174,7 @@ func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]SeqInfo, error) {
 
 	defer rows.Close()
 
-	ret := make([]SeqInfo, 0, 10)
+	ret := make([]Track, 0, 10)
 
 	var id uint
 	var publicId string
@@ -177,21 +182,28 @@ func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]SeqInfo, error) {
 	var name string
 	var reads uint
 	var dir string
+	var tags string
 
 	for rows.Next() {
-		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &dir)
+		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &dir, &tags)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		ret = append(ret, SeqInfo{PublicId: publicId, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Reads: reads})
+		ret = append(ret, Track{PublicId: publicId,
+			Genome:   genome,
+			Platform: platform,
+			Dataset:  dataset,
+			Name:     name,
+			Reads:    reads,
+			Tags:     strings.Split(tags, ",")})
 	}
 
 	return ret, nil
 }
 
-func (tracksDb *SeqDB) Search(genome string, query string) ([]SeqInfo, error) {
+func (tracksDb *SeqDB) Search(genome string, query string) ([]Track, error) {
 	var rows *sql.Rows
 	var err error
 
@@ -207,7 +219,7 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]SeqInfo, error) {
 
 	defer rows.Close()
 
-	ret := make([]SeqInfo, 0, 10)
+	ret := make([]Track, 0, 10)
 
 	var id uint
 	var publicId string
@@ -216,17 +228,24 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]SeqInfo, error) {
 	var name string
 	var reads uint
 	var dir string
+	var tags string
 
 	//id, uuid, genome, platform, name, reads, stat_mode, dir
 
 	for rows.Next() {
-		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &dir)
+		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &dir, &tags)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		ret = append(ret, SeqInfo{PublicId: publicId, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Reads: reads})
+		ret = append(ret, Track{PublicId: publicId,
+			Genome:   genome,
+			Platform: platform,
+			Dataset:  dataset,
+			Name:     name,
+			Reads:    reads,
+			Tags:     strings.Split(tags, ",")})
 	}
 
 	return ret, nil
@@ -241,6 +260,8 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 	var name string
 	var reads uint
 	var dir string
+	var tags string
+
 	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, dir FROM tracks WHERE seq.publicId = ?1`
 
 	err := tracksDb.db.QueryRow(SEQ_FROM_ID_SQL, publicId).Scan(&id,
@@ -250,13 +271,14 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 		&dataset,
 		&name,
 		&reads,
-		&dir)
+		&dir,
+		&tags)
 
 	if err != nil {
 		return nil, err
 	}
 
-	track := Track{Genome: genome, Platform: platform, Dataset: dataset, Name: name}
+	track := Track{Genome: genome, Platform: platform, Dataset: dataset, Name: name, Tags: strings.Split(tags, ",")}
 
 	dir = filepath.Join(tracksDb.dir, dir)
 
@@ -268,29 +290,29 @@ type SeqReader struct {
 	track           Track
 	binSize         uint
 	defaultBinCount uint
-	reads           uint
-	scale           float64
+	//reads           uint
+	//scale           float64
 }
 
-func NewSeqReader(dir string, track Track, binWidth uint, scale float64) (*SeqReader, error) {
+func NewSeqReader(dir string, track Track, binSize uint, scale float64) (*SeqReader, error) {
 
-	path := filepath.Join(dir, "track.db?mode=ro")
+	// path := filepath.Join(dir, "track.db?mode=ro")
 
-	db, err := sql.Open("sqlite3", path)
+	// db, err := sql.Open("sqlite3", path)
 
-	if err != nil {
-		return nil, err
-	}
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	defer db.Close()
+	// defer db.Close()
 
-	var reads uint
-	var name string
-	err = db.QueryRow(TRACK_SQL).Scan(&name, &reads)
+	// var reads uint
+	// var name string
+	// err = db.QueryRow(TRACK_SQL).Scan(&name, &reads)
 
-	if err != nil {
-		return nil, err
-	}
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// if err != nil {
 	// 	return nil, fmt.Errorf("error opening %s", file)
@@ -308,11 +330,13 @@ func NewSeqReader(dir string, track Track, binWidth uint, scale float64) (*SeqRe
 	// }
 
 	return &SeqReader{dir: dir,
-		binSize:         binWidth,
-		defaultBinCount: binWidth * 4,
-		reads:           reads,
-		track:           track,
-		scale:           scale}, nil
+		binSize: binSize,
+		// estimate the number of bins to represent a region
+		defaultBinCount: binSize * 4,
+		//reads:           reads,
+		track: track,
+		//scale:           scale
+	}, nil
 }
 
 // func (reader *SeqReader) getPath(location *dna.Location) string {

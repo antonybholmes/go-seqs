@@ -33,11 +33,11 @@ func Platforms(genome string) ([]string, error) {
 	return instance.Platforms(genome)
 }
 
-func Tracks(platform string, genome string) ([]seqs.SeqInfo, error) {
+func Tracks(platform string, genome string) ([]seqs.Track, error) {
 	return instance.Seqs(platform, genome)
 }
 
-func Search(genome string, query string) ([]seqs.SeqInfo, error) {
+func Search(genome string, query string) ([]seqs.Track, error) {
 	return instance.Search(genome, query)
 }
 
