@@ -24,7 +24,7 @@ cat ${dir}/track.sql | sqlite3 ${dir}/track.db
 # done
 
 #for f in `find ${dir} | grep -P 'chr.+sql$' | sort`
-for f in `find ${dir} | grep -P 'chr.+bin.+sql$' | grep -v 'track_bin' | sort`
+for f in `find ${dir} | grep -P 'chr.+sql$' | grep -v 'track_bin' | sort`
 do
 	echo ${f}
 	db=`echo ${f} | sed -r 's/sql/db/'`

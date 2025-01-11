@@ -19,7 +19,26 @@ CREATE TABLE track (
 	-- UNIQUE(bin, reads));
 -- CREATE INDEX track_bin_idx ON track (bin);
 
-CREATE TABLE bins (
+CREATE TABLE bpm_scale_factors (
+	bin_size INTEGER PRIMARY KEY,
+	scale_factor REAL NOT NULL);
+
+CREATE TABLE bins64 (
+	start INTEGER PRIMARY KEY,
+	end INTEGER NOT NULL,
+	reads INTEGER NOT NULL);
+
+CREATE TABLE bins128 (
+	start INTEGER PRIMARY KEY,
+	end INTEGER NOT NULL,
+	reads INTEGER NOT NULL);
+
+CREATE TABLE bins512 (
+	start INTEGER PRIMARY KEY,
+	end INTEGER NOT NULL,
+	reads INTEGER NOT NULL);
+
+CREATE TABLE bins1024 (
 	start INTEGER PRIMARY KEY,
 	end INTEGER NOT NULL,
 	reads INTEGER NOT NULL);
