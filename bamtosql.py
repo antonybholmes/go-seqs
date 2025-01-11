@@ -26,7 +26,7 @@ sample = args.sample  # sys.argv[1]
 bam = args.bam  # sys.argv[2]
 genome = args.genome  # sys.argv[3]
 platform = args.platform
-bin_widths = [int(w) for w in args.widths.split(",")]
+bin_sizes = [int(w) for w in args.widths.split(",")]
 outdir = args.out
 paired = args.paired
 
@@ -34,9 +34,9 @@ paired = args.paired
 
  
 
-print(sample, genome, bin_widths)
+print(sample, genome, bin_sizes)
 publicId = generate("0123456789abcdefghijklmnopqrstuvwxyz", 12)
-writer = libseq.BinCountWriter(publicId, sample, bam, genome, bin_widths=bin_widths, platform=platform, outdir=outdir)
+writer = libseq.BinCountWriter(publicId, sample, bam, genome, bin_sizes=bin_sizes, platform=platform, outdir=outdir)
 writer.write_all_chr_sql(paired=paired)
 
 # writer = libseq.BinCountWriter("CB4_BCL6_RK040_hg19.sorted.rmdup.bam", "hg19", bin_width=1000)
