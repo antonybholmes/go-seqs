@@ -1,0 +1,2 @@
+sample	bam
+LZ_110922_NR3C1_KC033	/ifs/scratch/cancer/Lab_RDF/ngs/cut_and_run/data/human/rdf/grch38/nr3c1_patient2_clarissa/align/LZ_110922_NR3C1_KC033/genome/grch38/6.aligned.sorted.mapped.paired.bam
