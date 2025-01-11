@@ -8,10 +8,8 @@ CREATE TABLE track (
 	genome TEXT NOT NULL,
 	name TEXT NOT NULL,
 	chr TEXT NOT NULL,
-	bin_width INTEGER NOT NULL,
-	reads INTEGER NOT NULL,
-	bpm_scale_factor REAL NOT NULL);
-
+	reads INTEGER NOT NULL);
+	
 -- CREATE TABLE track (
 	-- id INTEGER PRIMARY KEY ASC,
 	-- bin INTEGER NOT NULL UNIQUE,
