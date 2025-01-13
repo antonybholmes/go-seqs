@@ -21,17 +21,58 @@ CREATE TABLE bpm_scale_factors (
 	bin_size INTEGER PRIMARY KEY,
 	scale_factor REAL NOT NULL);
 
-CREATE TABLE bins50 (
+-- CREATE TABLE bins50 (
+-- 	start INTEGER PRIMARY KEY,
+-- 	end INTEGER NOT NULL,
+-- 	reads INTEGER NOT NULL);
+
+-- CREATE TABLE bins500 (
+-- 	start INTEGER PRIMARY KEY,
+-- 	end INTEGER NOT NULL,
+-- 	reads INTEGER NOT NULL);
+
+-- CREATE TABLE bins5000 (
+--         start INTEGER PRIMARY KEY,
+--         end INTEGER NOT NULL,
+--         reads INTEGER NOT NULL);
+
+-- CREATE TABLE bins20 (
+-- 	start INTEGER PRIMARY KEY,
+-- 	end INTEGER NOT NULL,
+-- 	reads INTEGER NOT NULL);
+
+-- CREATE TABLE bins200 (
+-- 	start INTEGER PRIMARY KEY,
+-- 	end INTEGER NOT NULL,
+-- 	reads INTEGER NOT NULL);
+
+-- CREATE TABLE bins2000 (
+--         start INTEGER PRIMARY KEY,
+--         end INTEGER NOT NULL,
+--         reads INTEGER NOT NULL);
+
+-- CREATE TABLE bins20000 (
+--         start INTEGER PRIMARY KEY,
+--         end INTEGER NOT NULL,
+--         reads INTEGER NOT NULL);
+
+
+CREATE TABLE bins10 (
 	start INTEGER PRIMARY KEY,
 	end INTEGER NOT NULL,
 	reads INTEGER NOT NULL);
 
-CREATE TABLE bins500 (
+CREATE TABLE bins100 (
 	start INTEGER PRIMARY KEY,
 	end INTEGER NOT NULL,
 	reads INTEGER NOT NULL);
 
-CREATE TABLE bins5000 (
+CREATE TABLE bins1000 (
+        start INTEGER PRIMARY KEY,
+        end INTEGER NOT NULL,
+        reads INTEGER NOT NULL);
+
+CREATE TABLE bins10000 (
         start INTEGER PRIMARY KEY,
         end INTEGER NOT NULL,
         reads INTEGER NOT NULL);

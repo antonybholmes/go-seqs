@@ -66,6 +66,46 @@ const BIN_5000_SQL = `SELECT start, end, reads
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
+// const BIN_20_SQL = `SELECT start, end, reads
+// 	FROM bins20
+//  	WHERE start <= ?2 AND end >= ?1
+// 	ORDER BY start`
+
+// const BIN_200_SQL = `SELECT start, end, reads
+// 	FROM bins200
+//  	WHERE start <= ?2 AND end >= ?1
+// 	ORDER BY start`
+
+// const BIN_2000_SQL = `SELECT start, end, reads
+// 	FROM bins2000
+//  	WHERE start <= ?2 AND end >= ?1
+// 	ORDER BY start`
+
+// const BIN_20000_SQL = `SELECT start, end, reads
+// 	FROM bins20000
+//  	WHERE start <= ?2 AND end >= ?1
+// 	ORDER BY start`
+
+const BIN_10_SQL = `SELECT start, end, reads 
+	FROM bins10
+ 	WHERE start <= ?2 AND end >= ?1
+	ORDER BY start`
+
+const BIN_100_SQL = `SELECT start, end, reads 
+	FROM bins100
+ 	WHERE start <= ?2 AND end >= ?1
+	ORDER BY start`
+
+const BIN_1000_SQL = `SELECT start, end, reads 
+	FROM bins1000
+ 	WHERE start <= ?2 AND end >= ?1
+	ORDER BY start`
+
+const BIN_10000_SQL = `SELECT start, end, reads 
+	FROM bins10000
+ 	WHERE start <= ?2 AND end >= ?1
+	ORDER BY start`
+
 const BPM_SQL = `SELECT scale_factor FROM bpm_scale_factors WHERE bin_size = ?1`
 
 type SeqBin struct {
@@ -408,7 +448,6 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	err = db.QueryRow(BPM_SQL, reader.binSize).Scan(&bpm) ///endBin)
 
 	if err != nil {
-		log.Debug().Msgf("aha %s %s", path, err)
 		return &ret, err
 	}
 
@@ -416,13 +455,35 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
 	var binSql string
 
+	// switch reader.binSize {
+	// case 5000:
+	// 	binSql = BIN_5000_SQL
+	// case 500:
+	// 	binSql = BIN_500_SQL
+	// default:
+	// 	binSql = BIN_50_SQL
+	// }
+
+	// switch reader.binSize {
+	// case 20000:
+	// 	binSql = BIN_20000_SQL
+	// case 2000:
+	// 	binSql = BIN_2000_SQL
+	// case 200:
+	// 	binSql = BIN_200_SQL
+	// default:
+	// 	binSql = BIN_20_SQL
+	// }
+
 	switch reader.binSize {
-	case 5000:
-		binSql = BIN_5000_SQL
-	case 500:
-		binSql = BIN_500_SQL
+	case 10000:
+		binSql = BIN_10000_SQL
+	case 1000:
+		binSql = BIN_1000_SQL
+	case 100:
+		binSql = BIN_100_SQL
 	default:
-		binSql = BIN_50_SQL
+		binSql = BIN_10_SQL
 	}
 
 	rows, err := db.Query(binSql,
@@ -441,6 +502,8 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	//reads := make([]uint, endBin-startBin+1)
 	//lastBinOfInterest := startBin + uint(len(ret.Bins))
 
+	//bins := make([][]uint, 0, reader.defaultBinCount)
+
 	for rows.Next() {
 		// read the location
 		err := rows.Scan(&readStart, &readEnd, &reads)
@@ -450,27 +513,24 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 		}
 
 		// to reduce data overhead, return 3 element array of start, end and read count
-		ret.Bins = append(ret.Bins, []uint{readStart, readEnd, reads}) //&SeqBin{Start: readStart, End: readEnd, Reads: reads})
-
-		// translate to block coordinates
-		//readBlockStart = (readStart - 1) / reader.BinSize
-		//readBlockEnd = (readEnd - 1) / reader.BinSize
-
-		// if the bin starts before our region of interest, but the end overlaps into it
-		// then we must fix the start to be at least the start bin
-		//readBlockStart := basemath.Max(startBin, readBlockStart)
-
-		// we don't want to load bin data that goes outside our coordinates
-		// of interest. A long gapped bin, may end beyond the blocks we are
-		// interested in, so we need to stop the loop short if so.
-		//readBlockEnd := basemath.Min(readBlockEnd, lastBinOfInterest)
-
-		// endbin is always 1 past the actual end of the bin, i.e. the start of
-		// another bin, therefore we treat it as exclusive
-		//for bin := readBlockStart; bin < readBlockEnd; bin++ {
-		//	ret.Bins[bin-startBin] = count // float64(count)
-		//}
+		//bins = append(bins, []uint{readStart, readEnd, reads}) //&SeqBin{Start: readStart, End: readEnd, Reads: reads})
+		ret.Bins = append(ret.Bins, []uint{readStart, readEnd, reads})
 	}
+
+	// fill in the gaps with zeros
+	// for bi, bin := range bins {
+	// 	ret.Bins = append(ret.Bins, bin)
+
+	// 	if bi < len(bins)-1 {
+	// 		nextBin := bins[bi+1]
+
+	// 		if (nextBin[0] - bin[1]) > 1 {
+	// 			// the next bin is not adjacent, so insert a gap
+	// 			ret.Bins = append(ret.Bins, []uint{bin[1] + 1, nextBin[0] - 1, 0})
+	// 		}
+	// 	}
+
+	// }
 
 	//log.Debug().Msgf("scale reads %f", reader.Scale)
 
