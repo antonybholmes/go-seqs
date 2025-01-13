@@ -77,7 +77,7 @@ for root, dirs, files in os.walk(dir):
             conn.close()
 
         if filename.endswith(".db") and filename != "track.db":
-            genome, platform, dataset, sample, binSize = root.split("/")[-5:]
+            genome, platform, dataset, sample = root.split("/")[-4:]
 
             # a bin file to convert
             # print(filename)
@@ -87,8 +87,7 @@ for root, dirs, files in os.walk(dir):
                 to_genome,
                 platform,
                 dataset,
-                sample + f"_{to_genome}_liftover",
-                binSize,
+                sample + f"_{to_genome}_liftover"
             )
 
             os.makedirs(sample_out_dir, exist_ok=True)
@@ -102,22 +101,6 @@ for root, dirs, files in os.walk(dir):
 
             # Create a cursor object
             cursor = conn.cursor()
-
-            # Execute a query to fetch data
-            cursor.execute(
-                "SELECT public_id, genome, platform, name, chr, bin_width, reads, bpm_scale_factor FROM track"
-            )
-
-            result = list(cursor.fetchone())
-
-            # give it a new id
-            result[0] = publicId
-
-            result[2] += f"_{to_genome}_liftover"
-
-            chr = result[4]
-
-            values = ", ".join([f"'{v}'" for v in result])
 
             cursor.execute("SELECT start, end, reads FROM bins")
 
@@ -134,8 +117,6 @@ for root, dirs, files in os.walk(dir):
                         f"{chr}\t{start}\t{end}\t{reads}",
                         file=f,
                     )
-
-            cursor.close()
 
             # /ifs/scratch/cancer/Lab_RDF/ngs/tools/ucsc/liftOver tmp.bed /ifs/scratch/cancer/Lab_RDF/ngs/references/ucsc/liftover/hg38ToHg19.over.chain tmp1.bed unmapped
 
@@ -155,11 +136,48 @@ for root, dirs, files in os.walk(dir):
                 # print("Command succeeded")
 
                 with open(out, "w") as f:
+
+                    # Execute a query to fetch data
+                    cursor.execute(
+                        "SELECT public_id, genome, platform, name, chr, bin_width, reads FROM track"
+                    )
+
+                    result = list(cursor.fetchone())
+
+                    # give it a new id
+                    result[0] = publicId
+
+                    result[2] += f"_{to_genome}_liftover"
+
+                    chr = result[4]
+
+                    values = ", ".join([f"'{v}'" for v in result])
+
                     print(
-                        f"INSERT INTO track (public_id, genome, platform, name, chr, bin_width, reads, bpm_scale_factor) VALUES ({values});",
+                        f"INSERT INTO track (public_id, genome, platform, name, chr, bin_width, reads) VALUES ({values});",
                         file=f,
                     )
 
+                    #
+                    # clone the scale factors
+                    #
+                    print("BEGIN TRANSACTION;", file=f)
+
+                    cursor.execute(
+                        "SELECT bin_size, scale_factor FROM bpm_scale_factors"
+                    )
+
+                    rows = cursor.fetchall()
+
+                    for row in rows:
+                        print(
+                            f"INSERT INTO bpm_scale_factors (bin_size, scale_factor) VALUES ({row[0]}, {row[1]});",
+                            file=f,
+                        )
+
+                    print("COMMIT;", file=f)
+
+                    # use the liftover bed to make a new bins file
                     print("BEGIN TRANSACTION;", file=f)
 
                     used = set()
@@ -167,7 +185,7 @@ for root, dirs, files in os.walk(dir):
                     with open(f"tmp_{to_genome}.bed", "r") as fin:
                         for line in fin:
                             tokens = line.strip().split("\t")
-                            
+
                             # if starts resolve to same location, keep the first
                             if tokens[1] in used:
                                 continue
