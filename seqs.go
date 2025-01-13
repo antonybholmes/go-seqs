@@ -51,7 +51,22 @@ const BIN_SQL = `SELECT start, end, reads
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BPM_SQL = `SELECT bpm_scale_factor FROM track`
+const BIN_50_SQL = `SELECT start, end, reads 
+	FROM bins50
+ 	WHERE start <= ?2 AND end >= ?1
+	ORDER BY start`
+
+const BIN_500_SQL = `SELECT start, end, reads 
+	FROM bins500
+ 	WHERE start <= ?2 AND end >= ?1
+	ORDER BY start`
+
+const BIN_5000_SQL = `SELECT start, end, reads 
+	FROM bins5000
+ 	WHERE start <= ?2 AND end >= ?1
+	ORDER BY start`
+
+const BPM_SQL = `SELECT scale_factor FROM bpm_scale_factors WHERE bin_size = ?1`
 
 type SeqBin struct {
 	Start uint `json:"s"`
@@ -67,8 +82,8 @@ type BinCounts struct {
 	Bins [][]uint `json:"bins"`
 	YMax uint     `json:"ymax"`
 	//Start    uint          `json:"start"`
-	BinWidth uint    `json:"binWidth"`
-	Bpm      float32 `json:"bpmScaleFactor"`
+	BinSize uint    `json:"binSize"`
+	Bpm     float32 `json:"bpmScaleFactor"`
 }
 
 // type Track struct {
@@ -363,18 +378,21 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 		//Track:    reader.Track,
 		//Location: location,
 		//Start:    startBin*reader.BinSize + 1,
-		Chr:      location.Chr,
-		Bins:     make([][]uint, 0, reader.defaultBinCount),
-		YMax:     0,
-		BinWidth: reader.binSize,
-		Bpm:      0,
+		Chr:     location.Chr,
+		Bins:    make([][]uint, 0, reader.defaultBinCount),
+		YMax:    0,
+		BinSize: reader.binSize,
+		Bpm:     0,
 	}
 
-	path := filepath.Join(reader.dir,
-		fmt.Sprintf("bin%d", reader.binSize),
-		fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.binSize, reader.track.Genome))
+	// path := filepath.Join(reader.dir,
+	// 	fmt.Sprintf("bin%d", reader.binSize),
+	// 	fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.binSize, reader.track.Genome))
 
-	//log.Debug().Msgf("track path %s", path)
+	path := filepath.Join(reader.dir,
+		fmt.Sprintf("%s_%s.db?mode=ro", location.Chr, reader.track.Genome))
+
+	log.Debug().Msgf("track path %s", path)
 
 	db, err := sql.Open("sqlite3", path)
 
@@ -387,7 +405,7 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
 	var bpm float32
 
-	err = db.QueryRow(BPM_SQL).Scan(&bpm) ///endBin)
+	err = db.QueryRow(BPM_SQL, reader.binSize).Scan(&bpm) ///endBin)
 
 	if err != nil {
 		log.Debug().Msgf("aha %s %s", path, err)
@@ -396,7 +414,18 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
 	ret.Bpm = bpm
 
-	rows, err := db.Query(BIN_SQL,
+	var binSql string
+
+	switch reader.binSize {
+	case 5000:
+		binSql = BIN_5000_SQL
+	case 500:
+		binSql = BIN_500_SQL
+	default:
+		binSql = BIN_50_SQL
+	}
+
+	rows, err := db.Query(binSql,
 		location.Start, //	startBin,
 		location.End)   ///endBin)
 
