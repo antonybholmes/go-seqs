@@ -86,23 +86,53 @@ const BIN_5000_SQL = `SELECT start, end, reads
 //  	WHERE start <= ?2 AND end >= ?1
 // 	ORDER BY start`
 
-const BIN_10_SQL = `SELECT start, end, reads 
-	FROM bins10
+// const BIN_10_SQL = `SELECT start, end, reads
+// 	FROM bins10
+//  	WHERE start <= ?2 AND end >= ?1
+// 	ORDER BY start`
+
+// const BIN_100_SQL = `SELECT start, end, reads
+// 	FROM bins100
+//  	WHERE start <= ?2 AND end >= ?1
+// 	ORDER BY start`
+
+// const BIN_1000_SQL = `SELECT start, end, reads
+// 	FROM bins1000
+//  	WHERE start <= ?2 AND end >= ?1
+// 	ORDER BY start`
+
+// const BIN_10000_SQL = `SELECT start, end, reads
+// 	FROM bins10000
+//  	WHERE start <= ?2 AND end >= ?1
+// 	ORDER BY start`
+
+const BIN_16_SQL = `SELECT start, end, reads 
+	FROM bins16
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BIN_100_SQL = `SELECT start, end, reads 
-	FROM bins100
+const BIN_64_SQL = `SELECT start, end, reads 
+	FROM bins64
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BIN_1000_SQL = `SELECT start, end, reads 
-	FROM bins1000
+const BIN_256_SQL = `SELECT start, end, reads 
+	FROM bins256
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BIN_10000_SQL = `SELECT start, end, reads 
-	FROM bins10000
+const BIN_1024_SQL = `SELECT start, end, reads 
+	FROM bins1024
+ 	WHERE start <= ?2 AND end >= ?1
+	ORDER BY start`
+
+const BIN_4096_SQL = `SELECT start, end, reads 
+	FROM bins4096
+ 	WHERE start <= ?2 AND end >= ?1
+	ORDER BY start`
+
+const BIN_16384_SQL = `SELECT start, end, reads 
+	FROM bins16384
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
@@ -475,15 +505,30 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	// 	binSql = BIN_20_SQL
 	// }
 
+	// switch reader.binSize {
+	// case 10000:
+	// 	binSql = BIN_10000_SQL
+	// case 1000:
+	// 	binSql = BIN_1000_SQL
+	// case 100:
+	// 	binSql = BIN_100_SQL
+	// default:
+	// 	binSql = BIN_10_SQL
+	// }
+
 	switch reader.binSize {
-	case 10000:
-		binSql = BIN_10000_SQL
-	case 1000:
-		binSql = BIN_1000_SQL
-	case 100:
-		binSql = BIN_100_SQL
+	case 16:
+		binSql = BIN_16_SQL
+	case 64:
+		binSql = BIN_64_SQL
+	case 256:
+		binSql = BIN_256_SQL
+	case 1024:
+		binSql = BIN_1024_SQL
+	case 4096:
+		binSql = BIN_4096_SQL
 	default:
-		binSql = BIN_10_SQL
+		binSql = BIN_16384_SQL
 	}
 
 	rows, err := db.Query(binSql,
