@@ -1,6 +1,6 @@
 genome=grch38
 dir=/home/antony/development/data/modules/seqs/${genome}/Cut_And_Run
-bin_widths=64,128,256,512,1024
+bin_widths=10,100,1000,10000 #64,128,256,512,1024
 
 cat cutrun.txt | sed 1d | grep -v '#' | while read line
 do

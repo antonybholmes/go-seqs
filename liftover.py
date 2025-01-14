@@ -10,6 +10,8 @@ import sqlite3
 import subprocess
 from nanoid import generate
 
+BINS = [10,100,1000,10000]
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--dir", help="input directory")
 parser.add_argument("-o", "--outdir", help="output directory")
@@ -80,7 +82,7 @@ for root, dirs, files in os.walk(dir):
             genome, platform, dataset, sample = root.split("/")[-4:]
 
             # a bin file to convert
-            # print(filename)
+            print(filename)
 
             sample_out_dir = os.path.join(
                 outdir,
@@ -97,104 +99,107 @@ for root, dirs, files in os.walk(dir):
                 filename.replace(".db", ".sql").replace(from_genome, to_genome),
             )
 
-            conn = sqlite3.connect(os.path.join(root, filename))
+            with open(out, "w") as fout:
+                conn = sqlite3.connect(os.path.join(root, filename))
 
-            # Create a cursor object
-            cursor = conn.cursor()
+                # Create a cursor object
+                cursor = conn.cursor()
 
-            cursor.execute("SELECT start, end, reads FROM bins")
+                # Execute a query to fetch data
+                cursor.execute(
+                    "SELECT public_id, genome, platform, name, chr, reads FROM track"
+                )
 
-            rows = cursor.fetchall()
+                result = list(cursor.fetchone())
 
-            with open("tmp.bed", "w") as f:
+                # give it a new id
+                result[0] = publicId
+
+                result[2] += f"_{to_genome}_liftover"
+
+                chr = result[4]
+
+                values = ", ".join([f"'{v}'" for v in result])
+
+                print(
+                    f"INSERT INTO track (public_id, genome, platform, name, chr, reads) VALUES ({values});",
+                    file=fout,
+                )
+
+                #
+                # clone the scale factors
+                #
+                print("BEGIN TRANSACTION;", file=fout)
+
+                cursor.execute(
+                    "SELECT bin_size, scale_factor FROM bpm_scale_factors"
+                )
+
+                rows = cursor.fetchall()
 
                 for row in rows:
-                    start = row[0]
-                    end = row[1]
-                    reads = row[2]
-
                     print(
-                        f"{chr}\t{start}\t{end}\t{reads}",
-                        file=f,
+                        f"INSERT INTO bpm_scale_factors (bin_size, scale_factor) VALUES ({row[0]}, {row[1]});",
+                        file=fout,
                     )
 
-            # /ifs/scratch/cancer/Lab_RDF/ngs/tools/ucsc/liftOver tmp.bed /ifs/scratch/cancer/Lab_RDF/ngs/references/ucsc/liftover/hg38ToHg19.over.chain tmp1.bed unmapped
+                print("COMMIT;", file=fout)
 
-            res = subprocess.run(
-                [
-                    "/ifs/scratch/cancer/Lab_RDF/ngs/tools/ucsc/liftOver",
-                    "tmp.bed",
-                    "/ifs/scratch/cancer/Lab_RDF/ngs/references/ucsc/liftover/hg38ToHg19.over.chain",
-                    f"tmp_{to_genome}.bed",
-                    "unmapped",
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+                
 
-            if res.returncode == 0:
-                # print("Command succeeded")
+                for bin in BINS:
 
-                with open(out, "w") as f:
-
-                    # Execute a query to fetch data
-                    cursor.execute(
-                        "SELECT public_id, genome, platform, name, chr, bin_width, reads FROM track"
-                    )
-
-                    result = list(cursor.fetchone())
-
-                    # give it a new id
-                    result[0] = publicId
-
-                    result[2] += f"_{to_genome}_liftover"
-
-                    chr = result[4]
-
-                    values = ", ".join([f"'{v}'" for v in result])
-
-                    print(
-                        f"INSERT INTO track (public_id, genome, platform, name, chr, bin_width, reads) VALUES ({values});",
-                        file=f,
-                    )
-
-                    #
-                    # clone the scale factors
-                    #
-                    print("BEGIN TRANSACTION;", file=f)
-
-                    cursor.execute(
-                        "SELECT bin_size, scale_factor FROM bpm_scale_factors"
-                    )
+                    cursor.execute(f"SELECT start, end, reads FROM bins{bin}")
 
                     rows = cursor.fetchall()
 
-                    for row in rows:
-                        print(
-                            f"INSERT INTO bpm_scale_factors (bin_size, scale_factor) VALUES ({row[0]}, {row[1]});",
-                            file=f,
-                        )
+                    with open("tmp.bed", "w") as f:
 
-                    print("COMMIT;", file=f)
-
-                    # use the liftover bed to make a new bins file
-                    print("BEGIN TRANSACTION;", file=f)
-
-                    used = set()
-
-                    with open(f"tmp_{to_genome}.bed", "r") as fin:
-                        for line in fin:
-                            tokens = line.strip().split("\t")
-
-                            # if starts resolve to same location, keep the first
-                            if tokens[1] in used:
-                                continue
+                        for row in rows:
+                            start = row[0]
+                            end = row[1]
+                            reads = row[2]
 
                             print(
-                                f"INSERT INTO bins (start, end, reads) VALUES ({tokens[1]}, {tokens[2]}, {tokens[3]});",
+                                f"{chr}\t{start}\t{end}\t{reads}",
                                 file=f,
                             )
 
-                            used.add(tokens[1])
+                    # /ifs/scratch/cancer/Lab_RDF/ngs/tools/ucsc/liftOver tmp.bed /ifs/scratch/cancer/Lab_RDF/ngs/references/ucsc/liftover/hg38ToHg19.over.chain tmp1.bed unmapped
 
-                    print("COMMIT;", file=f)
+                    res = subprocess.run(
+                        [
+                            "/ifs/scratch/cancer/Lab_RDF/ngs/tools/ucsc/liftOver",
+                            "tmp.bed",
+                            "/ifs/scratch/cancer/Lab_RDF/ngs/references/ucsc/liftover/hg38ToHg19.over.chain",
+                            f"tmp_{to_genome}.bed",
+                            "unmapped",
+                        ],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+
+                    if res.returncode == 0:
+                        # print("Command succeeded")
+
+                        # use the liftover bed to make a new bins file
+                        print("BEGIN TRANSACTION;", file=fout)
+
+                        used = set()
+
+                        with open(f"tmp_{to_genome}.bed", "r") as fin:
+                            for line in fin:
+                                tokens = line.strip().split("\t")
+
+                                # if starts resolve to same location, keep the first
+                                if tokens[1] in used:
+                                    continue
+
+                                print(
+                                    f"INSERT INTO bins{bin} (start, end, reads) VALUES ({tokens[1]}, {tokens[2]}, {tokens[3]});",
+                                    file=fout,
+                                )
+
+                                used.add(tokens[1])
+
+                        print("COMMIT;", file=fout)
