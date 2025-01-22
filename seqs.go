@@ -145,7 +145,7 @@ type SeqBin struct {
 }
 
 type BinCounts struct {
-	Chr string `json:"chr"`
+	//Chr string `json:"chr"`
 	//Track    Track         `json:"track"`
 	//Location *dna.Location `json:"loc"`
 	//Bins []*SeqBin `json:"bins"`
@@ -448,7 +448,7 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 		//Track:    reader.Track,
 		//Location: location,
 		//Start:    startBin*reader.BinSize + 1,
-		Chr:     location.Chr,
+		//Chr:     location.Chr,
 		Bins:    make([][]uint, 0, reader.defaultBinCount),
 		YMax:    0,
 		BinSize: reader.binSize,
