@@ -145,6 +145,8 @@ type SeqBin struct {
 }
 
 type BinCounts struct {
+	PublicId string `json:"seqId"`
+	Name     string `json:"name"`
 	//Chr string `json:"chr"`
 	//Track    Track         `json:"track"`
 	//Location *dna.Location `json:"loc"`
@@ -373,7 +375,7 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 	tagList := strings.Split(tags, ",")
 	sort.Strings(tagList)
 
-	track := Track{Genome: genome, Platform: platform, Dataset: dataset, Name: name, Tags: tagList}
+	track := Track{PublicId: publicId, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Tags: tagList}
 
 	dir = filepath.Join(tracksDb.dir, dir)
 
@@ -445,6 +447,8 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
 	// we return something for every call, even if data not available
 	ret := BinCounts{
+		PublicId: reader.track.PublicId,
+		Name:     reader.track.Name,
 		//Track:    reader.Track,
 		//Location: location,
 		//Start:    startBin*reader.BinSize + 1,
