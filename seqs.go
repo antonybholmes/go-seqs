@@ -466,7 +466,7 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	path := filepath.Join(reader.dir,
 		fmt.Sprintf("%s_%s.db?mode=ro", location.Chr, reader.track.Genome))
 
-	log.Debug().Msgf("track path %s", path)
+	//log.Debug().Msgf("track path %s", path)
 
 	db, err := sql.Open("sqlite3", path)
 
