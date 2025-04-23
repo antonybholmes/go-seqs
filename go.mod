@@ -11,8 +11,8 @@ replace github.com/antonybholmes/go-sys => ../go-sys
 replace github.com/antonybholmes/go-basemath => ../go-basemath
 
 require (
-	github.com/antonybholmes/go-basemath v0.0.0-20250307171544-f522e91d1448
-	github.com/antonybholmes/go-sys v0.0.0-20250407123533-c0a150855656
+	github.com/antonybholmes/go-basemath v0.0.0-20250416150928-5a7b42705292
+	github.com/antonybholmes/go-sys v0.0.0-20250416150929-65c6bca5e1ff
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/rs/zerolog v1.34.0
 )
@@ -33,7 +33,7 @@ require (
 )
 
 require (
-	github.com/antonybholmes/go-dna v0.0.0-20250405224421-32db60060b39
+	github.com/antonybholmes/go-dna v0.0.0-20250416150924-f0155aed2a7f
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	golang.org/x/sys v0.32.0 // indirect
