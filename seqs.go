@@ -25,23 +25,23 @@ const PLATFORMS_SQL = `SELECT DISTINCT platform FROM tracks WHERE genome = ?1 OR
 
 //const TRACK_SQL = `SELECT name, reads FROM track`
 
-const SELECT_TRACK_SQL = `SELECT id, public_id, genome, platform, dataset, name, reads, dir, tags `
+const SELECT_TRACK_SQL = `SELECT id, public_id, genome, platform, dataset, name, reads, source, url, tags `
 
 const TRACKS_SQL = SELECT_TRACK_SQL +
 	`FROM tracks 
 	WHERE genome = ?1 AND platform = ?2 
 	ORDER BY name`
 
-const ALL_SEQS_SQL = SELECT_TRACK_SQL +
+const ALL_TRACKS_SQL = SELECT_TRACK_SQL +
 	`FROM tracks 
 	WHERE genome = ?1 
 	ORDER BY genome, platform, dataset, name`
 
-const SEQ_FROM_ID_SQL = SELECT_TRACK_SQL +
+const TRACK_FROM_ID_SQL = SELECT_TRACK_SQL +
 	`FROM tracks 
 	WHERE public_id = ?1`
 
-const SEARCH_SEQS_SQL = SELECT_TRACK_SQL +
+const SEARCH_TRACKS_SQL = SELECT_TRACK_SQL +
 	`FROM tracks 
 	WHERE genome = ?1 AND (public_id = ?1 OR platform = ?1 OR dataset LIKE ?2 OR name LIKE ?2)
 	ORDER BY genome, platform, dataset, name`
@@ -166,11 +166,13 @@ type BinCounts struct {
 // }
 
 type Track struct {
-	PublicId string   `json:"seqId"`
+	PublicId string   `json:"publicId"`
 	Genome   string   `json:"genome"`
 	Platform string   `json:"platform"`
 	Dataset  string   `json:"dataset"`
 	Name     string   `json:"name"`
+	Source   string   `json:"source"`
+	Url      string   `json:"url"`
 	Tags     []string `json:"tags"`
 	Reads    uint     `json:"reads"`
 }
@@ -180,24 +182,24 @@ type SeqDB struct {
 	stmtAllSeqs    *sql.Stmt
 	stmtSearchSeqs *sql.Stmt
 	stmtSeqFromId  *sql.Stmt
-	dir            string
+	url            string
 }
 
 func (tracksDb *SeqDB) Dir() string {
-	return tracksDb.dir
+	return tracksDb.url
 }
 
-func NewSeqDB(dir string) *SeqDB {
-	log.Debug().Msgf("Load db: %s", filepath.Join(dir, "tracks.db?mode=ro"))
-	db := sys.Must(sql.Open("sqlite3", filepath.Join(dir, "tracks.db?mode=ro")))
+func NewSeqDB(url string) *SeqDB {
+	log.Debug().Msgf("Load db: %s", filepath.Join(url, "tracks.db?mode=ro"))
+	db := sys.Must(sql.Open("sqlite3", filepath.Join(url, "tracks.db?mode=ro")))
 
-	x := sys.Must(db.Prepare(ALL_SEQS_SQL))
+	x := sys.Must(db.Prepare(ALL_TRACKS_SQL))
 
-	return &SeqDB{dir: dir,
+	return &SeqDB{url: url,
 		db:             db,
 		stmtAllSeqs:    x,
-		stmtSearchSeqs: sys.Must(db.Prepare(SEARCH_SEQS_SQL)),
-		stmtSeqFromId:  sys.Must(db.Prepare(SEQ_FROM_ID_SQL))}
+		stmtSearchSeqs: sys.Must(db.Prepare(SEARCH_TRACKS_SQL)),
+		stmtSeqFromId:  sys.Must(db.Prepare(TRACK_FROM_ID_SQL))}
 }
 
 func (tracksDb *SeqDB) Genomes() ([]string, error) {
@@ -268,12 +270,13 @@ func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
 	var publicId string
 	var dataset string
 	var name string
+	var source string
 	var reads uint
-	var dir string
+	var url string
 	var tags string
 
 	for rows.Next() {
-		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &dir, &tags)
+		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &source, &url, &tags)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
@@ -282,13 +285,20 @@ func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
 		tagList := strings.Split(tags, ",")
 		sort.Strings(tagList)
 
-		ret = append(ret, Track{PublicId: publicId,
+		track := Track{PublicId: publicId,
 			Genome:   genome,
 			Platform: platform,
 			Dataset:  dataset,
 			Name:     name,
 			Reads:    reads,
-			Tags:     tagList})
+			Source:   source,
+			Tags:     tagList}
+
+		if track.Source == "Remote BigWig" {
+			track.Url = url
+		}
+
+		ret = append(ret, track)
 	}
 
 	return ret, nil
@@ -318,13 +328,14 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]Track, error) {
 	var dataset string
 	var name string
 	var reads uint
-	var dir string
+	var source string
+	var url string
 	var tags string
 
-	//id, uuid, genome, platform, name, reads, stat_mode, dir
+	//id, uuid, genome, platform, name, reads, stat_mode, url
 
 	for rows.Next() {
-		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &dir, &tags)
+		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &source, &url, &tags)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
@@ -333,13 +344,20 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]Track, error) {
 		tagList := strings.Split(tags, ",")
 		sort.Strings(tagList)
 
-		ret = append(ret, Track{PublicId: publicId,
+		track := Track{PublicId: publicId,
 			Genome:   genome,
 			Platform: platform,
 			Dataset:  dataset,
 			Name:     name,
 			Reads:    reads,
-			Tags:     tagList})
+			Source:   source,
+			Tags:     tagList}
+
+		if track.Source == "Remote BigWig" {
+			track.Url = url
+		}
+
+		ret = append(ret, track)
 	}
 
 	return ret, nil
@@ -353,19 +371,21 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 	var dataset string
 	var name string
 	var reads uint
-	var dir string
+	var source string
+	var url string
 	var tags string
 
-	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, dir FROM tracks WHERE seq.publicId = ?1`
+	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, url FROM tracks WHERE seq.publicId = ?1`
 
-	err := tracksDb.db.QueryRow(SEQ_FROM_ID_SQL, publicId).Scan(&id,
+	err := tracksDb.db.QueryRow(TRACK_FROM_ID_SQL, publicId).Scan(&id,
 		&publicId,
 		&genome,
 		&platform,
 		&dataset,
 		&name,
 		&reads,
-		&dir,
+		&source,
+		&url,
 		&tags)
 
 	if err != nil {
@@ -375,15 +395,19 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 	tagList := strings.Split(tags, ",")
 	sort.Strings(tagList)
 
-	track := Track{PublicId: publicId, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Tags: tagList}
+	track := Track{PublicId: publicId, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Source: source, Tags: tagList}
 
-	dir = filepath.Join(tracksDb.dir, dir)
+	if track.Source == "Remote bigWig" {
+		track.Url = url
+	}
 
-	return NewSeqReader(dir, track, binWidth, scale)
+	url = filepath.Join(tracksDb.url, url)
+
+	return NewSeqReader(url, track, binWidth, scale)
 }
 
 type SeqReader struct {
-	dir             string
+	url             string
 	track           Track
 	binSize         uint
 	defaultBinCount uint
@@ -391,9 +415,9 @@ type SeqReader struct {
 	//scale           float64
 }
 
-func NewSeqReader(dir string, track Track, binSize uint, scale float64) (*SeqReader, error) {
+func NewSeqReader(url string, track Track, binSize uint, scale float64) (*SeqReader, error) {
 
-	// path := filepath.Join(dir, "track.db?mode=ro")
+	// path := filepath.Join(url, "track.db?mode=ro")
 
 	// db, err := sql.Open("sqlite3", path)
 
@@ -426,7 +450,7 @@ func NewSeqReader(dir string, track Track, binSize uint, scale float64) (*SeqRea
 	// 	return nil, fmt.Errorf("could not count reads")
 	// }
 
-	return &SeqReader{dir: dir,
+	return &SeqReader{url: url,
 		binSize: binSize,
 		// estimate the number of bins to represent a region
 		defaultBinCount: binSize * 4,
@@ -459,11 +483,7 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 		Bpm:     0,
 	}
 
-	// path := filepath.Join(reader.dir,
-	// 	fmt.Sprintf("bin%d", reader.binSize),
-	// 	fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.binSize, reader.track.Genome))
-
-	path := filepath.Join(reader.dir,
+	path := filepath.Join(reader.url,
 		fmt.Sprintf("%s_%s.db?mode=ro", location.Chr, reader.track.Genome))
 
 	//log.Debug().Msgf("track path %s", path)
@@ -488,37 +508,6 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 	ret.Bpm = bpm
 
 	var binSql string
-
-	// switch reader.binSize {
-	// case 5000:
-	// 	binSql = BIN_5000_SQL
-	// case 500:
-	// 	binSql = BIN_500_SQL
-	// default:
-	// 	binSql = BIN_50_SQL
-	// }
-
-	// switch reader.binSize {
-	// case 20000:
-	// 	binSql = BIN_20000_SQL
-	// case 2000:
-	// 	binSql = BIN_2000_SQL
-	// case 200:
-	// 	binSql = BIN_200_SQL
-	// default:
-	// 	binSql = BIN_20_SQL
-	// }
-
-	// switch reader.binSize {
-	// case 10000:
-	// 	binSql = BIN_10000_SQL
-	// case 1000:
-	// 	binSql = BIN_1000_SQL
-	// case 100:
-	// 	binSql = BIN_100_SQL
-	// default:
-	// 	binSql = BIN_10_SQL
-	// }
 
 	switch reader.binSize {
 	case 16:
@@ -545,13 +534,7 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 
 	var readStart uint
 	var readEnd uint
-	//var readBlockStart uint
-	//var readBlockEnd uint
 	var reads uint
-	//reads := make([]uint, endBin-startBin+1)
-	//lastBinOfInterest := startBin + uint(len(ret.Bins))
-
-	//bins := make([][]uint, 0, reader.defaultBinCount)
 
 	for rows.Next() {
 		// read the location
@@ -562,58 +545,12 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
 		}
 
 		// to reduce data overhead, return 3 element array of start, end and read count
-		//bins = append(bins, []uint{readStart, readEnd, reads}) //&SeqBin{Start: readStart, End: readEnd, Reads: reads})
 		ret.Bins = append(ret.Bins, []uint{readStart, readEnd, reads})
 	}
-
-	// fill in the gaps with zeros
-	// for bi, bin := range bins {
-	// 	ret.Bins = append(ret.Bins, bin)
-
-	// 	if bi < len(bins)-1 {
-	// 		nextBin := bins[bi+1]
-
-	// 		if (nextBin[0] - bin[1]) > 1 {
-	// 			// the next bin is not adjacent, so insert a gap
-	// 			ret.Bins = append(ret.Bins, []uint{bin[1] + 1, nextBin[0] - 1, 0})
-	// 		}
-	// 	}
-
-	// }
-
-	//log.Debug().Msgf("scale reads %f", reader.Scale)
 
 	for _, bin := range ret.Bins {
 		ret.YMax = basemath.Max(ret.YMax, bin[2])
 	}
 
-	// work out ymax
-	//ret.YMax = basemath.MaxUintArray(&ret.Bins)
-
-	// scale to some hypothetical .e.g. 1,000,000
-	// if reader.Scale > 0 {
-	// 	factor := reader.Scale / float64(reader.Reads)
-
-	// 	for i, r := range reads {
-	// 		reads[i] = r * factor
-	// 	}
-	// }
-
-	//log.Debug().Msgf("bins %v", ret)
-
 	return &ret, nil
-
-	// var magic uint32
-	// binary.Read(f, binary.LittleEndian, &magic)
-	// var binSizeBytes byte
-	// binary.Read(f, binary.LittleEndian, &binSizeBytes)
-
-	// switch binSizeBytes {
-	// case 1:
-	// 	return reader.ReadsUint8(location)
-	// case 2:
-	// 	return reader.ReadsUint16(location)
-	// default:
-	// 	return reader.ReadsUint32(location)
-	// }
 }
