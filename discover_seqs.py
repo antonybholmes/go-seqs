@@ -59,7 +59,7 @@ with open(os.path.join(dir, "tracks.sql"), "w") as f:
     for row in data:
         values = ", ".join([f"'{v}'" for v in row])
         print(
-            f"INSERT INTO tracks (public_id, genome, platform, name, reads, dataset, source, url, tags) VALUES ({values});",
+            f"INSERT INTO tracks (public_id, genome, platform, name, reads, dataset, track_type, url, tags) VALUES ({values});",
             file=f,
         )
 

@@ -44,6 +44,6 @@ with open(out, "w") as fout:
                 url = tokens[1]
                 publicId = generate("0123456789abcdefghijklmnopqrstuvwxyz", 12)
                 print(
-                    f"INSERT INTO tracks (public_id, genome, platform, name, reads, dataset, source, url, tags) VALUES ('{publicId}', '{genome}', '{platform}', '{name}', 0, '{dataset}', 'Remote BigWig', '{url}', 'scale={scale}');",
+                    f"INSERT INTO tracks (public_id, genome, platform, name, reads, dataset, track_type, url, tags) VALUES ('{publicId}', '{genome}', '{platform}', '{name}', 0, '{dataset}', 'Remote BigWig', '{url}', 'scale={scale}');",
                     file=fout,
                 )

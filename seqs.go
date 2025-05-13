@@ -25,7 +25,7 @@ const PLATFORMS_SQL = `SELECT DISTINCT platform FROM tracks WHERE genome = ?1 OR
 
 //const TRACK_SQL = `SELECT name, reads FROM track`
 
-const SELECT_TRACK_SQL = `SELECT id, public_id, genome, platform, dataset, name, reads, source, url, tags `
+const SELECT_TRACK_SQL = `SELECT id, public_id, genome, platform, dataset, name, reads, track_type, url, tags `
 
 const TRACKS_SQL = SELECT_TRACK_SQL +
 	`FROM tracks 
@@ -166,15 +166,15 @@ type BinCounts struct {
 // }
 
 type Track struct {
-	PublicId string   `json:"publicId"`
-	Genome   string   `json:"genome"`
-	Platform string   `json:"platform"`
-	Dataset  string   `json:"dataset"`
-	Name     string   `json:"name"`
-	Source   string   `json:"source"`
-	Url      string   `json:"url"`
-	Tags     []string `json:"tags"`
-	Reads    uint     `json:"reads"`
+	PublicId  string   `json:"publicId"`
+	Genome    string   `json:"genome"`
+	Platform  string   `json:"platform"`
+	Dataset   string   `json:"dataset"`
+	Name      string   `json:"name"`
+	TrackType string   `json:"trackType"`
+	Url       string   `json:"url"`
+	Tags      []string `json:"tags"`
+	Reads     uint     `json:"reads"`
 }
 
 type SeqDB struct {
@@ -270,13 +270,22 @@ func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
 	var publicId string
 	var dataset string
 	var name string
-	var source string
+	var trackType string
 	var reads uint
 	var url string
 	var tags string
 
 	for rows.Next() {
-		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &source, &url, &tags)
+		err := rows.Scan(&id,
+			&publicId,
+			&genome,
+			&platform,
+			&dataset,
+			&name,
+			&reads,
+			&trackType,
+			&url,
+			&tags)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
@@ -286,15 +295,15 @@ func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
 		sort.Strings(tagList)
 
 		track := Track{PublicId: publicId,
-			Genome:   genome,
-			Platform: platform,
-			Dataset:  dataset,
-			Name:     name,
-			Reads:    reads,
-			Source:   source,
-			Tags:     tagList}
+			Genome:    genome,
+			Platform:  platform,
+			Dataset:   dataset,
+			Name:      name,
+			Reads:     reads,
+			TrackType: trackType,
+			Tags:      tagList}
 
-		if track.Source == "Remote BigWig" {
+		if track.TrackType == "Remote BigWig" {
 			track.Url = url
 		}
 
@@ -328,14 +337,14 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]Track, error) {
 	var dataset string
 	var name string
 	var reads uint
-	var source string
+	var trackType string
 	var url string
 	var tags string
 
 	//id, uuid, genome, platform, name, reads, stat_mode, url
 
 	for rows.Next() {
-		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &source, &url, &tags)
+		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &trackType, &url, &tags)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
@@ -345,15 +354,15 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]Track, error) {
 		sort.Strings(tagList)
 
 		track := Track{PublicId: publicId,
-			Genome:   genome,
-			Platform: platform,
-			Dataset:  dataset,
-			Name:     name,
-			Reads:    reads,
-			Source:   source,
-			Tags:     tagList}
+			Genome:    genome,
+			Platform:  platform,
+			Dataset:   dataset,
+			Name:      name,
+			Reads:     reads,
+			TrackType: trackType,
+			Tags:      tagList}
 
-		if track.Source == "Remote BigWig" {
+		if track.TrackType == "Remote BigWig" {
 			track.Url = url
 		}
 
@@ -371,7 +380,7 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 	var dataset string
 	var name string
 	var reads uint
-	var source string
+	var trackType string
 	var url string
 	var tags string
 
@@ -384,7 +393,7 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 		&dataset,
 		&name,
 		&reads,
-		&source,
+		&trackType,
 		&url,
 		&tags)
 
@@ -395,9 +404,9 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 	tagList := strings.Split(tags, ",")
 	sort.Strings(tagList)
 
-	track := Track{PublicId: publicId, Genome: genome, Platform: platform, Dataset: dataset, Name: name, Source: source, Tags: tagList}
+	track := Track{PublicId: publicId, Genome: genome, Platform: platform, Dataset: dataset, Name: name, TrackType: trackType, Tags: tagList}
 
-	if track.Source == "Remote bigWig" {
+	if track.TrackType == "Remote bigWig" {
 		track.Url = url
 	}
 

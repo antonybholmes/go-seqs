@@ -9,7 +9,7 @@ CREATE TABLE tracks (
 	dataset TEXT NOT NULL,
 	name TEXT NOT NULL,
 	reads INTEGER NOT NULL,
-	source TEXT NOT NULL,
+	track_type TEXT NOT NULL,
 	url TEXT NOT NULL,
 	tags TEXT,
 	description TEXT,
