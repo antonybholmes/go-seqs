@@ -144,7 +144,7 @@ type SeqBin struct {
 	Reads uint `json:"r"`
 }
 
-type BinCounts struct {
+type TrackBinCounts struct {
 	PublicId string `json:"publicId"`
 	Name     string `json:"name"`
 	//Chr string `json:"chr"`
@@ -473,13 +473,13 @@ func NewSeqReader(url string, track Track, binSize uint, scale float64) (*SeqRea
 // 	return filepath.Join(reader.Dir, fmt.Sprintf("bin%d", reader.BinSize), fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
 // }
 
-func (reader *SeqReader) BinCounts(location *dna.Location) (*BinCounts, error) {
+func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*TrackBinCounts, error) {
 
 	//var startBin uint = (location.Start - 1) / reader.BinSize
 	//var endBin uint = (location.End - 1) / reader.BinSize
 
 	// we return something for every call, even if data not available
-	ret := BinCounts{
+	ret := TrackBinCounts{
 		PublicId: reader.track.PublicId,
 		Name:     reader.track.Name,
 		//Track:    reader.Track,
