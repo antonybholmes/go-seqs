@@ -145,7 +145,7 @@ type SeqBin struct {
 }
 
 type BinCounts struct {
-	PublicId string `json:"seqId"`
+	PublicId string `json:"publicId"`
 	Name     string `json:"name"`
 	//Chr string `json:"chr"`
 	//Track    Track         `json:"track"`
