@@ -178,11 +178,11 @@ type Track struct {
 }
 
 type SeqDB struct {
-	db             *sql.DB
-	stmtAllSeqs    *sql.Stmt
-	stmtSearchSeqs *sql.Stmt
-	stmtSeqFromId  *sql.Stmt
-	url            string
+	db *sql.DB
+	//stmtAllSeqs    *sql.Stmt
+	//stmtSearchSeqs *sql.Stmt
+	//stmtSeqFromId  *sql.Stmt
+	url string
 }
 
 func (tracksDb *SeqDB) Dir() string {
@@ -193,13 +193,14 @@ func NewSeqDB(url string) *SeqDB {
 	log.Debug().Msgf("Load db: %s", filepath.Join(url, "tracks.db?mode=ro"))
 	db := sys.Must(sql.Open("sqlite3", filepath.Join(url, "tracks.db?mode=ro")))
 
-	x := sys.Must(db.Prepare(ALL_TRACKS_SQL))
+	//x := sys.Must(db.Prepare(ALL_TRACKS_SQL))
 
 	return &SeqDB{url: url,
-		db:             db,
-		stmtAllSeqs:    x,
-		stmtSearchSeqs: sys.Must(db.Prepare(SEARCH_TRACKS_SQL)),
-		stmtSeqFromId:  sys.Must(db.Prepare(TRACK_FROM_ID_SQL))}
+		db: db,
+		//stmtAllSeqs:    x,
+		//stmtSearchSeqs: sys.Must(db.Prepare(SEARCH_TRACKS_SQL)),
+		//stmtSeqFromId:  sys.Must(db.Prepare(TRACK_FROM_ID_SQL))
+	}
 }
 
 func (tracksDb *SeqDB) Genomes() ([]string, error) {
@@ -318,9 +319,9 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]Track, error) {
 	var err error
 
 	if query != "" {
-		rows, err = tracksDb.stmtSearchSeqs.Query(genome, query, fmt.Sprintf("%%%s%%", query))
+		rows, err = tracksDb.db.Query(SEARCH_TRACKS_SQL, genome, query, fmt.Sprintf("%%%s%%", query))
 	} else {
-		rows, err = tracksDb.stmtAllSeqs.Query(genome)
+		rows, err = tracksDb.db.Query(ALL_TRACKS_SQL, genome)
 	}
 
 	if err != nil {
