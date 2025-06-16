@@ -22,7 +22,7 @@ func TestWithin(t *testing.T) {
 		t.Fatalf(`err %s`, err)
 	}
 
-	binCounts, err := reader.BinCounts(location)
+	binCounts, err := reader.TrackBinCounts(location)
 
 	if err != nil {
 		t.Fatalf(`err %s`, err)
