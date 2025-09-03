@@ -11,7 +11,7 @@ replace github.com/antonybholmes/go-basemath => ../go-basemath
 require (
 	github.com/antonybholmes/go-basemath v0.0.0-20250812213434-6cf4f7c1176d
 	github.com/antonybholmes/go-sys v0.0.0-20250812213435-bed670f8992a
-	github.com/mattn/go-sqlite3 v1.14.31
+	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/rs/zerolog v1.34.0
 )
 
@@ -25,7 +25,7 @@ require (
 	github.com/xuri/excelize/v2 v2.9.1 // indirect
 	github.com/xuri/nfp v0.0.1 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
-	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6 // indirect
+	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 )
