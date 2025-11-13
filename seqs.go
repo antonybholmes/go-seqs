@@ -10,8 +10,8 @@ import (
 	basemath "github.com/antonybholmes/go-basemath"
 	"github.com/antonybholmes/go-dna"
 	"github.com/antonybholmes/go-sys"
+	"github.com/antonybholmes/go-sys/log"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/rs/zerolog/log"
 )
 
 // const MAGIC_NUMBER_OFFSET_BYTES = 0
