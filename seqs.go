@@ -14,176 +14,180 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type (
+	SeqBin struct {
+		Start int `json:"s"`
+		End   int `json:"e"`
+		Reads int `json:"r"`
+	}
+
+	TrackBinCounts struct {
+		PublicId string `json:"publicId"`
+		Name     string `json:"name"`
+		//Chr string `json:"chr"`
+		//Track    Track         `json:"track"`
+		//Location *dna.Location `json:"loc"`
+		//Bins []*SeqBin `json:"bins"`
+		Bins [][]int `json:"bins"`
+		YMax int     `json:"ymax"`
+		//Start    uint          `json:"start"`
+		BinSize int     `json:"binSize"`
+		Bpm     float32 `json:"bpmScaleFactor"`
+	}
+
+	// type Track struct {
+	// 	Genome   string `json:"genome"`
+	// 	Platform string `json:"platform"`
+	// 	Dataset  string `json:"dataset"`
+	// 	Name     string `json:"name"`
+	// }
+
+	Track struct {
+		PublicId  string   `json:"publicId"`
+		Genome    string   `json:"genome"`
+		Platform  string   `json:"platform"`
+		Dataset   string   `json:"dataset"`
+		Name      string   `json:"name"`
+		TrackType string   `json:"trackType"`
+		Url       string   `json:"url"`
+		Tags      []string `json:"tags"`
+		Reads     uint     `json:"reads"`
+	}
+
+	SeqDB struct {
+		db *sql.DB
+		//stmtAllSeqs    *sql.Stmt
+		//stmtSearchSeqs *sql.Stmt
+		//stmtSeqFromId  *sql.Stmt
+		url string
+	}
+)
+
 // const MAGIC_NUMBER_OFFSET_BYTES = 0
 // const BIN_SIZE_OFFSET_BYTES = MAGIC_NUMBER_OFFSET_BYTES + 4
 // const BIN_WIDTH_OFFSET_BYTES = BIN_SIZE_OFFSET_BYTES + 4
 // const N_BINS_OFFSET_BYTES = BIN_WIDTH_OFFSET_BYTES + 4
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
-const GENOMES_SQL = `SELECT DISTINCT genome FROM tracks ORDER BY genome`
-const PLATFORMS_SQL = `SELECT DISTINCT platform FROM tracks WHERE genome = ?1 ORDER BY platform`
+const (
+	GENOMES_SQL   = `SELECT DISTINCT genome FROM tracks ORDER BY genome`
+	PLATFORMS_SQL = `SELECT DISTINCT platform FROM tracks WHERE genome = ?1 ORDER BY platform`
 
-//const TRACK_SQL = `SELECT name, reads FROM track`
+	//const TRACK_SQL = `SELECT name, reads FROM track`
 
-const SELECT_TRACK_SQL = `SELECT id, public_id, genome, platform, dataset, name, reads, track_type, url, tags `
+	SELECT_TRACK_SQL = `SELECT id, public_id, genome, platform, dataset, name, reads, track_type, url, tags `
 
-const TRACKS_SQL = SELECT_TRACK_SQL +
-	`FROM tracks 
+	TRACKS_SQL = SELECT_TRACK_SQL +
+		`FROM tracks 
 	WHERE genome = ?1 AND platform = ?2 
 	ORDER BY name`
 
-const ALL_TRACKS_SQL = SELECT_TRACK_SQL +
-	`FROM tracks 
+	ALL_TRACKS_SQL = SELECT_TRACK_SQL +
+		`FROM tracks 
 	WHERE genome = ?1 
 	ORDER BY genome, platform, dataset, name`
 
-const TRACK_FROM_ID_SQL = SELECT_TRACK_SQL +
-	`FROM tracks 
+	TRACK_FROM_ID_SQL = SELECT_TRACK_SQL +
+		`FROM tracks 
 	WHERE public_id = ?1`
 
-const SEARCH_TRACKS_SQL = SELECT_TRACK_SQL +
-	`FROM tracks 
+	SEARCH_TRACKS_SQL = SELECT_TRACK_SQL +
+		`FROM tracks 
 	WHERE genome = ?1 AND (public_id = ?1 OR platform = ?1 OR dataset LIKE ?2 OR name LIKE ?2)
 	ORDER BY genome, platform, dataset, name`
 
-const BIN_SQL = `SELECT start, end, reads 
+	BIN_SQL = `SELECT start, end, reads 
 	FROM bins
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BIN_50_SQL = `SELECT start, end, reads 
+	BIN_50_SQL = `SELECT start, end, reads 
 	FROM bins50
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BIN_500_SQL = `SELECT start, end, reads 
+	BIN_500_SQL = `SELECT start, end, reads 
 	FROM bins500
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BIN_5000_SQL = `SELECT start, end, reads 
+	BIN_5000_SQL = `SELECT start, end, reads 
 	FROM bins5000
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-// const BIN_20_SQL = `SELECT start, end, reads
-// 	FROM bins20
-//  	WHERE start <= ?2 AND end >= ?1
-// 	ORDER BY start`
+	// const BIN_20_SQL = `SELECT start, end, reads
+	// 	FROM bins20
+	//  	WHERE start <= ?2 AND end >= ?1
+	// 	ORDER BY start`
 
-// const BIN_200_SQL = `SELECT start, end, reads
-// 	FROM bins200
-//  	WHERE start <= ?2 AND end >= ?1
-// 	ORDER BY start`
+	// const BIN_200_SQL = `SELECT start, end, reads
+	// 	FROM bins200
+	//  	WHERE start <= ?2 AND end >= ?1
+	// 	ORDER BY start`
 
-// const BIN_2000_SQL = `SELECT start, end, reads
-// 	FROM bins2000
-//  	WHERE start <= ?2 AND end >= ?1
-// 	ORDER BY start`
+	// const BIN_2000_SQL = `SELECT start, end, reads
+	// 	FROM bins2000
+	//  	WHERE start <= ?2 AND end >= ?1
+	// 	ORDER BY start`
 
-// const BIN_20000_SQL = `SELECT start, end, reads
-// 	FROM bins20000
-//  	WHERE start <= ?2 AND end >= ?1
-// 	ORDER BY start`
+	// const BIN_20000_SQL = `SELECT start, end, reads
+	// 	FROM bins20000
+	//  	WHERE start <= ?2 AND end >= ?1
+	// 	ORDER BY start`
 
-// const BIN_10_SQL = `SELECT start, end, reads
-// 	FROM bins10
-//  	WHERE start <= ?2 AND end >= ?1
-// 	ORDER BY start`
+	// const BIN_10_SQL = `SELECT start, end, reads
+	// 	FROM bins10
+	//  	WHERE start <= ?2 AND end >= ?1
+	// 	ORDER BY start`
 
-// const BIN_100_SQL = `SELECT start, end, reads
-// 	FROM bins100
-//  	WHERE start <= ?2 AND end >= ?1
-// 	ORDER BY start`
+	// const BIN_100_SQL = `SELECT start, end, reads
+	// 	FROM bins100
+	//  	WHERE start <= ?2 AND end >= ?1
+	// 	ORDER BY start`
 
-// const BIN_1000_SQL = `SELECT start, end, reads
-// 	FROM bins1000
-//  	WHERE start <= ?2 AND end >= ?1
-// 	ORDER BY start`
+	// const BIN_1000_SQL = `SELECT start, end, reads
+	// 	FROM bins1000
+	//  	WHERE start <= ?2 AND end >= ?1
+	// 	ORDER BY start`
 
-// const BIN_10000_SQL = `SELECT start, end, reads
-// 	FROM bins10000
-//  	WHERE start <= ?2 AND end >= ?1
-// 	ORDER BY start`
+	// const BIN_10000_SQL = `SELECT start, end, reads
+	// 	FROM bins10000
+	//  	WHERE start <= ?2 AND end >= ?1
+	// 	ORDER BY start`
 
-const BIN_16_SQL = `SELECT start, end, reads 
+	BIN_16_SQL = `SELECT start, end, reads 
 	FROM bins16
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BIN_64_SQL = `SELECT start, end, reads 
+	BIN_64_SQL = `SELECT start, end, reads 
 	FROM bins64
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BIN_256_SQL = `SELECT start, end, reads 
+	BIN_256_SQL = `SELECT start, end, reads 
 	FROM bins256
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BIN_1024_SQL = `SELECT start, end, reads 
+	BIN_1024_SQL = `SELECT start, end, reads 
 	FROM bins1024
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BIN_4096_SQL = `SELECT start, end, reads 
+	BIN_4096_SQL = `SELECT start, end, reads 
 	FROM bins4096
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BIN_16384_SQL = `SELECT start, end, reads 
+	BIN_16384_SQL = `SELECT start, end, reads 
 	FROM bins16384
  	WHERE start <= ?2 AND end >= ?1
 	ORDER BY start`
 
-const BPM_SQL = `SELECT scale_factor FROM bpm_scale_factors WHERE bin_size = ?1`
-
-type SeqBin struct {
-	Start int `json:"s"`
-	End   int `json:"e"`
-	Reads int `json:"r"`
-}
-
-type TrackBinCounts struct {
-	PublicId string `json:"publicId"`
-	Name     string `json:"name"`
-	//Chr string `json:"chr"`
-	//Track    Track         `json:"track"`
-	//Location *dna.Location `json:"loc"`
-	//Bins []*SeqBin `json:"bins"`
-	Bins [][]int `json:"bins"`
-	YMax int     `json:"ymax"`
-	//Start    uint          `json:"start"`
-	BinSize int     `json:"binSize"`
-	Bpm     float32 `json:"bpmScaleFactor"`
-}
-
-// type Track struct {
-// 	Genome   string `json:"genome"`
-// 	Platform string `json:"platform"`
-// 	Dataset  string `json:"dataset"`
-// 	Name     string `json:"name"`
-// }
-
-type Track struct {
-	PublicId  string   `json:"publicId"`
-	Genome    string   `json:"genome"`
-	Platform  string   `json:"platform"`
-	Dataset   string   `json:"dataset"`
-	Name      string   `json:"name"`
-	TrackType string   `json:"trackType"`
-	Url       string   `json:"url"`
-	Tags      []string `json:"tags"`
-	Reads     uint     `json:"reads"`
-}
-
-type SeqDB struct {
-	db *sql.DB
-	//stmtAllSeqs    *sql.Stmt
-	//stmtSearchSeqs *sql.Stmt
-	//stmtSeqFromId  *sql.Stmt
-	url string
-}
+	BPM_SQL = `SELECT scale_factor FROM bpm_scale_factors WHERE bin_size = ?1`
+)
 
 func (tracksDb *SeqDB) Dir() string {
 	return tracksDb.url
@@ -494,11 +498,11 @@ func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*TrackBinCounts
 	}
 
 	path := filepath.Join(reader.url,
-		fmt.Sprintf("%s_%s.db?mode=ro", location.Chr, reader.track.Genome))
+		fmt.Sprintf("%s_%s.db?mode=ro", location.Chr(), reader.track.Genome))
 
 	//log.Debug().Msgf("track path %s", path)
 
-	db, err := sql.Open("sqlite3", path)
+	db, err := sql.Open(sys.Sqlite3DB, path)
 
 	if err != nil {
 		log.Debug().Msgf("error opening %s %s", path, err)
@@ -535,8 +539,8 @@ func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*TrackBinCounts
 	}
 
 	rows, err := db.Query(binSql,
-		location.Start, //	startBin,
-		location.End)   ///endBin)
+		location.Start(), //	startBin,
+		location.End())   ///endBin)
 
 	if err != nil {
 		return &ret, err
