@@ -41,6 +41,6 @@ func Search(genome string, query string) ([]seqs.Track, error) {
 	return instance.Search(genome, query)
 }
 
-func ReaderFromId(publicId string, binWidth uint, scale float64) (*seqs.SeqReader, error) {
+func ReaderFromId(publicId string, binWidth int, scale float64) (*seqs.SeqReader, error) {
 	return instance.ReaderFromId(publicId, binWidth, scale)
 }

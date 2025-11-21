@@ -139,9 +139,9 @@ const BIN_16384_SQL = `SELECT start, end, reads
 const BPM_SQL = `SELECT scale_factor FROM bpm_scale_factors WHERE bin_size = ?1`
 
 type SeqBin struct {
-	Start uint `json:"s"`
-	End   uint `json:"e"`
-	Reads uint `json:"r"`
+	Start int `json:"s"`
+	End   int `json:"e"`
+	Reads int `json:"r"`
 }
 
 type TrackBinCounts struct {
@@ -151,10 +151,10 @@ type TrackBinCounts struct {
 	//Track    Track         `json:"track"`
 	//Location *dna.Location `json:"loc"`
 	//Bins []*SeqBin `json:"bins"`
-	Bins [][]uint `json:"bins"`
-	YMax uint     `json:"ymax"`
+	Bins [][]int `json:"bins"`
+	YMax int     `json:"ymax"`
 	//Start    uint          `json:"start"`
-	BinSize uint    `json:"binSize"`
+	BinSize int     `json:"binSize"`
 	Bpm     float32 `json:"bpmScaleFactor"`
 }
 
@@ -373,14 +373,14 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]Track, error) {
 	return ret, nil
 }
 
-func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float64) (*SeqReader, error) {
+func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth int, scale float64) (*SeqReader, error) {
 
-	var id uint
+	var id int
 	var platform string
 	var genome string
 	var dataset string
 	var name string
-	var reads uint
+	var reads int
 	var trackType string
 	var url string
 	var tags string
@@ -419,13 +419,13 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth uint, scale float6
 type SeqReader struct {
 	url             string
 	track           Track
-	binSize         uint
-	defaultBinCount uint
+	binSize         int
+	defaultBinCount int
 	//reads           uint
 	//scale           float64
 }
 
-func NewSeqReader(url string, track Track, binSize uint, scale float64) (*SeqReader, error) {
+func NewSeqReader(url string, track Track, binSize int, scale float64) (*SeqReader, error) {
 
 	// path := filepath.Join(url, "track.db?mode=ro")
 
@@ -487,7 +487,7 @@ func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*TrackBinCounts
 		//Location: location,
 		//Start:    startBin*reader.BinSize + 1,
 		//Chr:     location.Chr,
-		Bins:    make([][]uint, 0, reader.defaultBinCount),
+		Bins:    make([][]int, 0, reader.defaultBinCount),
 		YMax:    0,
 		BinSize: reader.binSize,
 		Bpm:     0,
@@ -542,9 +542,9 @@ func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*TrackBinCounts
 		return &ret, err
 	}
 
-	var readStart uint
-	var readEnd uint
-	var reads uint
+	var readStart int
+	var readEnd int
+	var reads int
 
 	for rows.Next() {
 		// read the location
@@ -555,7 +555,7 @@ func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*TrackBinCounts
 		}
 
 		// to reduce data overhead, return 3 element array of start, end and read count
-		ret.Bins = append(ret.Bins, []uint{readStart, readEnd, reads})
+		ret.Bins = append(ret.Bins, []int{readStart, readEnd, reads})
 	}
 
 	for _, bin := range ret.Bins {
