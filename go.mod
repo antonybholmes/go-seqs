@@ -10,7 +10,7 @@ replace github.com/antonybholmes/go-basemath => ../go-basemath
 
 require (
 	github.com/antonybholmes/go-basemath v0.0.0-20251201172054-b807a31af9fa
-	github.com/antonybholmes/go-sys v0.0.0-20251201172055-50c02bde14ef
+	github.com/antonybholmes/go-sys v0.0.0-20251208175344-5a45ea74fe16
 	github.com/mattn/go-sqlite3 v1.14.32
 )
 
@@ -24,15 +24,15 @@ require (
 	github.com/xuri/efp v0.0.1 // indirect
 	github.com/xuri/excelize/v2 v2.10.0 // indirect
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/exp v0.0.0-20251125195548-87e1e737ad39 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
+	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
 require (
-	github.com/antonybholmes/go-dna v0.0.0-20251202201834-d297c2ed0db0
+	github.com/antonybholmes/go-dna v0.0.0-20251208175340-7a1e56259903
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	golang.org/x/sys v0.39.0 // indirect
