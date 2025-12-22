@@ -5,7 +5,7 @@ import (
 
 	"github.com/antonybholmes/go-dna"
 	seq "github.com/antonybholmes/go-seqs"
-	"github.com/antonybholmes/go-seqs/seqsdbcache"
+	"github.com/antonybholmes/go-seqs/seqdb"
 	"github.com/antonybholmes/go-sys/log"
 	"github.com/antonybholmes/go-web"
 	"github.com/gin-gonic/gin"
@@ -67,7 +67,7 @@ func ParseSeqParamsFromPost(c *gin.Context) (*SeqParams, error) {
 }
 
 func GenomeRoute(c *gin.Context) {
-	platforms, err := seqsdbcache.Genomes()
+	platforms, err := seqdb.Genomes()
 
 	if err != nil {
 		c.Error(err)
@@ -80,7 +80,7 @@ func GenomeRoute(c *gin.Context) {
 func PlatformRoute(c *gin.Context) {
 	genome := c.Param("assembly")
 
-	platforms, err := seqsdbcache.Platforms(genome)
+	platforms, err := seqdb.Platforms(genome)
 
 	if err != nil {
 		c.Error(err)
@@ -94,7 +94,7 @@ func TracksRoute(c *gin.Context) {
 	platform := c.Param("platform")
 	genome := c.Param("assembly")
 
-	tracks, err := seqsdbcache.Tracks(platform, genome)
+	tracks, err := seqdb.Tracks(platform, genome)
 
 	if err != nil {
 		c.Error(err)
@@ -114,7 +114,7 @@ func SearchSeqRoute(c *gin.Context) {
 
 	query := c.Query("search")
 
-	tracks, err := seqsdbcache.Search(genome, query)
+	tracks, err := seqdb.Search(genome, query)
 
 	if err != nil {
 		c.Error(err)
@@ -142,7 +142,7 @@ func BinsRoute(c *gin.Context) {
 		resp := SeqResp{Location: location, Tracks: make([]*seq.TrackBinCounts, 0, len(params.Tracks))}
 
 		for _, track := range params.Tracks {
-			reader, err := seqsdbcache.ReaderFromId(track,
+			reader, err := seqdb.ReaderFromId(track,
 				params.BinSizes[li],
 				params.Scale)
 

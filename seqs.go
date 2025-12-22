@@ -189,13 +189,13 @@ const (
 	BPM_SQL = `SELECT scale_factor FROM bpm_scale_factors WHERE bin_size = ?1`
 )
 
-func (tracksDb *SeqDB) Dir() string {
-	return tracksDb.url
+func (sdb *SeqDB) Dir() string {
+	return sdb.url
 }
 
 func NewSeqDB(url string) *SeqDB {
 	log.Debug().Msgf("Load db: %s", filepath.Join(url, "tracks.db?mode=ro"))
-	db := sys.Must(sql.Open("sqlite3", filepath.Join(url, "tracks.db?mode=ro")))
+	db := sys.Must(sql.Open(sys.Sqlite3DB, filepath.Join(url, "tracks.db?mode=ro")))
 
 	//x := sys.Must(db.Prepare(ALL_TRACKS_SQL))
 
@@ -207,8 +207,12 @@ func NewSeqDB(url string) *SeqDB {
 	}
 }
 
-func (tracksDb *SeqDB) Genomes() ([]string, error) {
-	rows, err := tracksDb.db.Query(GENOMES_SQL)
+func (sdb *SeqDB) Close() error {
+	return sdb.db.Close()
+}
+
+func (sdb *SeqDB) Genomes() ([]string, error) {
+	rows, err := sdb.db.Query(GENOMES_SQL)
 
 	if err != nil {
 		return nil, err //fmt.Errorf("there was an error with the database query")
@@ -232,8 +236,8 @@ func (tracksDb *SeqDB) Genomes() ([]string, error) {
 
 	return ret, nil
 }
-func (tracksDb *SeqDB) Platforms(genome string) ([]string, error) {
-	rows, err := tracksDb.db.Query(PLATFORMS_SQL, genome)
+func (sdb *SeqDB) Platforms(genome string) ([]string, error) {
+	rows, err := sdb.db.Query(PLATFORMS_SQL, genome)
 
 	if err != nil {
 		return nil, err //fmt.Errorf("there was an error with the database query")
@@ -258,8 +262,8 @@ func (tracksDb *SeqDB) Platforms(genome string) ([]string, error) {
 	return ret, nil
 }
 
-func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
-	rows, err := tracksDb.db.Query(TRACKS_SQL, genome, platform)
+func (sdb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
+	rows, err := sdb.db.Query(TRACKS_SQL, genome, platform)
 
 	if err != nil {
 		return nil, err //fmt.Errorf("there was an error with the database query")
@@ -318,14 +322,14 @@ func (tracksDb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
 	return ret, nil
 }
 
-func (tracksDb *SeqDB) Search(genome string, query string) ([]Track, error) {
+func (sdb *SeqDB) Search(genome string, query string) ([]Track, error) {
 	var rows *sql.Rows
 	var err error
 
 	if query != "" {
-		rows, err = tracksDb.db.Query(SEARCH_TRACKS_SQL, genome, query, fmt.Sprintf("%%%s%%", query))
+		rows, err = sdb.db.Query(SEARCH_TRACKS_SQL, genome, query, fmt.Sprintf("%%%s%%", query))
 	} else {
-		rows, err = tracksDb.db.Query(ALL_TRACKS_SQL, genome)
+		rows, err = sdb.db.Query(ALL_TRACKS_SQL, genome)
 	}
 
 	if err != nil {
@@ -377,7 +381,7 @@ func (tracksDb *SeqDB) Search(genome string, query string) ([]Track, error) {
 	return ret, nil
 }
 
-func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth int, scale float64) (*SeqReader, error) {
+func (sdb *SeqDB) ReaderFromId(publicId string, binWidth int, scale float64) (*SeqReader, error) {
 
 	var id int
 	var platform string
@@ -391,7 +395,7 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth int, scale float64
 
 	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, url FROM tracks WHERE seq.publicId = ?1`
 
-	err := tracksDb.db.QueryRow(TRACK_FROM_ID_SQL, publicId).Scan(&id,
+	err := sdb.db.QueryRow(TRACK_FROM_ID_SQL, publicId).Scan(&id,
 		&publicId,
 		&genome,
 		&platform,
@@ -415,7 +419,7 @@ func (tracksDb *SeqDB) ReaderFromId(publicId string, binWidth int, scale float64
 		track.Url = url
 	}
 
-	url = filepath.Join(tracksDb.url, url)
+	url = filepath.Join(sdb.url, url)
 
 	return NewSeqReader(url, track, binWidth, scale)
 }

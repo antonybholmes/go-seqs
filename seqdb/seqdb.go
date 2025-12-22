@@ -1,4 +1,4 @@
-package seqsdbcache
+package seqdb
 
 import (
 	"sync"
@@ -9,7 +9,7 @@ import (
 var instance *seqs.SeqDB
 var once sync.Once
 
-func InitCache(dir string) *seqs.SeqDB {
+func InitSeqDB(dir string) *seqs.SeqDB {
 	once.Do(func() {
 		instance = seqs.NewSeqDB(dir)
 	})
