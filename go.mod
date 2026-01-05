@@ -9,10 +9,10 @@ replace github.com/antonybholmes/go-sys => ../go-sys
 replace github.com/antonybholmes/go-basemath => ../go-basemath
 
 require (
-	github.com/antonybholmes/go-basemath v0.0.0-20251211184815-6e7285b975dd
-	github.com/antonybholmes/go-sys v0.0.0-20251215211105-61a3d71011f7
+	github.com/antonybholmes/go-basemath v0.0.0-20251222161838-164f0a0354bb
+	github.com/antonybholmes/go-sys v0.0.0-20251221180058-882857878f72
 	github.com/gin-gonic/gin v1.11.0
-	github.com/mattn/go-sqlite3 v1.14.32
+	github.com/mattn/go-sqlite3 v1.14.33
 )
 
 require (
@@ -37,7 +37,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.57.1 // indirect
-	github.com/richardlehane/mscfb v1.0.4 // indirect
+	github.com/richardlehane/mscfb v1.0.5 // indirect
 	github.com/richardlehane/msoleps v1.0.4 // indirect
 	github.com/rs/zerolog v1.34.0 // indirect
 	github.com/tiendc/go-deepcopy v1.7.2 // indirect
@@ -56,7 +56,7 @@ require (
 )
 
 require (
-	github.com/antonybholmes/go-dna v0.0.0-20251219174959-949288f128af
+	github.com/antonybholmes/go-dna v0.0.0-20251222161834-554612b2b749
 	github.com/antonybholmes/go-web v0.0.0-20251215211100-5555b69aa3c0
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
