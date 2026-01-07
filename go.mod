@@ -10,7 +10,7 @@ replace github.com/antonybholmes/go-basemath => ../go-basemath
 
 require (
 	github.com/antonybholmes/go-basemath v0.0.0-20251222161838-164f0a0354bb
-	github.com/antonybholmes/go-sys v0.0.0-20251221180058-882857878f72
+	github.com/antonybholmes/go-sys v0.0.0-20260105204539-98810971944a
 	github.com/gin-gonic/gin v1.11.0
 	github.com/mattn/go-sqlite3 v1.14.33
 )
@@ -56,7 +56,7 @@ require (
 )
 
 require (
-	github.com/antonybholmes/go-dna v0.0.0-20251222161834-554612b2b749
+	github.com/antonybholmes/go-dna v0.0.0-20260105204534-358e33dd6d4e
 	github.com/antonybholmes/go-web v0.0.0-20251215211100-5555b69aa3c0
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
