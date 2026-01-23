@@ -1,6 +1,6 @@
 genome=grch38
 dir=/home/antony/development/data/modules/seqs/${genome}/RNA-seq
-bin_widths=64,128,256,512,1024
+bin_widths=16,64,256,1024,4096,16384 #64,128,256,512,1024
 
 cat rnaseq.txt | sed 1d | grep -v '#' | while read line
 do

@@ -31,3 +31,17 @@ sample	Dataset
 /ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/RDF_CB5_BCL6_04_RK064/reads/RDF_CB5_BCL6_04_RK064.hg19.sorted.rmdup.bam	RDF_Lab
 /ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/RDF_CB5_BCL6_08_RK065/reads/RDF_CB5_BCL6_08_RK065.hg19.sorted.rmdup.bam	RDF_Lab
 /ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/rdf/hg19/rdf/katia/data/RDF_CB5_Input_05_RK070/reads/RDF_CB5_Input_05_RK070.hg19.sorted.rmdup.bam	RDF_Lab
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_ACCCACT_Centroblast_H3K4me2_rep2_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_ACGTCTG_Centrocyte_H3K4me2_rep1_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_AGATACT_Centrocyte_input_rep2_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_CAAGCCG_Centrocyte_AP4_rep1_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_CAATATC_Centroblast_input_rep2_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_CGTCGCT_Centroblast_H3K27ac_rep1_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_GAGGCGT_Centroblast_AP4_rep1_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_GCAGGGG_Centrocyte_H3K27ac_rep1_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_GGGTCAA_Centrocyte_AP4_rep2_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_GTCTGAT_Centroblast_input_rep1_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_TCAACTG_Centroblast_H3K27ac_rep2_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_TGAGGTT_Centrocyte_input_rep1_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_TTTAACT_Centroblast_AP4_rep2_hg19.bam	Egawa
+/ifs/scratch/cancer/Lab_RDF/ngs/chip_seq/data/human/other_labs/egawa_tfap4/hg19/analysis/all_bam/Egawa_TTTTGTC_Centroblast_H3K4me2_rep1_hg19.bam	Egawa
