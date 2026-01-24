@@ -33,14 +33,18 @@ func Platforms(genome string) ([]string, error) {
 	return instance.Platforms(genome)
 }
 
-func Tracks(platform string, genome string) ([]seqs.Track, error) {
+func Tracks(platform string, genome string) ([]seqs.Sample, error) {
 	return instance.Seqs(platform, genome)
 }
 
-func Search(genome string, query string) ([]seqs.Track, error) {
+func Search(genome string, query string) ([]seqs.Sample, error) {
 	return instance.Search(genome, query)
 }
 
 func ReaderFromId(publicId string, binWidth int, scale float64) (*seqs.SeqReader, error) {
 	return instance.ReaderFromId(publicId, binWidth, scale)
+}
+
+func HasPermissionToViewDataset(datasetId string, permissions []string) error {
+	return instance.HasPermissionToViewDataset(datasetId, permissions)
 }

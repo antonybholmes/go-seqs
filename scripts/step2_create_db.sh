@@ -9,9 +9,9 @@
 sample=$1
 dir=$2
 
-rm ${dir}/track.db
-cat track.sql | sqlite3 ${dir}/track.db
-cat ${dir}/track.sql | sqlite3 ${dir}/track.db
+rm ${dir}/sample.db
+cat sample.sql | sqlite3 ${dir}/sample.db
+cat ${dir}/sample.sql | sqlite3 ${dir}/sample.db
 
 # for f in `find ${dir} | grep -P 'track_bin.+sql$' | sort`
 # do

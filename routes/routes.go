@@ -8,6 +8,7 @@ import (
 	"github.com/antonybholmes/go-seqs/seqdb"
 	"github.com/antonybholmes/go-sys/log"
 	"github.com/antonybholmes/go-web"
+	"github.com/antonybholmes/go-web/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,8 +32,8 @@ type (
 	}
 
 	SeqResp struct {
-		Location *dna.Location         `json:"location"`
-		Tracks   []*seq.TrackBinCounts `json:"tracks"`
+		Location *dna.Location          `json:"location"`
+		Tracks   []*seq.SampleBinCounts `json:"tracks"`
 	}
 )
 
@@ -64,6 +65,22 @@ func ParseSeqParamsFromPost(c *gin.Context) (*SeqParams, error) {
 			Tracks:    params.Tracks,
 			Scale:     params.Scale},
 		nil
+}
+
+func userHasPermissionToViewDataset(c *gin.Context, datasetId string) error {
+	user, err := middleware.GetJwtUser(c)
+
+	if err != nil {
+		return err
+	}
+
+	err = seqdb.HasPermissionToViewDataset(datasetId, user.Permissions)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func GenomeRoute(c *gin.Context) {
@@ -139,7 +156,7 @@ func BinsRoute(c *gin.Context) {
 	ret := make([]*SeqResp, 0, len(params.Locations)) //make([]*seq.BinCounts, 0, len(params.Tracks))
 
 	for li, location := range params.Locations {
-		resp := SeqResp{Location: location, Tracks: make([]*seq.TrackBinCounts, 0, len(params.Tracks))}
+		resp := SeqResp{Location: location, Tracks: make([]*seq.SampleBinCounts, 0, len(params.Tracks))}
 
 		for _, track := range params.Tracks {
 			reader, err := seqdb.ReaderFromId(track,

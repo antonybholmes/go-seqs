@@ -21,9 +21,9 @@ type (
 		Reads int `json:"r"`
 	}
 
-	TrackBinCounts struct {
-		PublicId string `json:"publicId"`
-		Name     string `json:"name"`
+	SampleBinCounts struct {
+		Id   string `json:"id"`
+		Name string `json:"name"`
 		//Chr string `json:"chr"`
 		//Track    Track         `json:"track"`
 		//Location *dna.Location `json:"loc"`
@@ -35,16 +35,17 @@ type (
 		Bpm     float32 `json:"bpmScaleFactor"`
 	}
 
-	// type Track struct {
+	// type Sample struct {
 	// 	Genome   string `json:"genome"`
 	// 	Platform string `json:"platform"`
 	// 	Dataset  string `json:"dataset"`
 	// 	Name     string `json:"name"`
 	// }
 
-	Track struct {
-		PublicId  string   `json:"publicId"`
+	Sample struct {
+		Id        string   `json:"id"`
 		Genome    string   `json:"genome"`
+		Assembly  string   `json:"assembly"`
 		Platform  string   `json:"platform"`
 		Dataset   string   `json:"dataset"`
 		Name      string   `json:"name"`
@@ -70,51 +71,51 @@ type (
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
 const (
-	GENOMES_SQL   = `SELECT DISTINCT genome FROM tracks ORDER BY genome`
-	PLATFORMS_SQL = `SELECT DISTINCT platform FROM tracks WHERE genome = ?1 ORDER BY platform`
+	GenomesSql   = `SELECT DISTINCT genome FROM tracks ORDER BY genome`
+	PlatformsSql = `SELECT DISTINCT platform FROM tracks WHERE genome = ?1 ORDER BY platform`
 
 	//const TRACK_SQL = `SELECT name, reads FROM track`
 
-	SELECT_TRACK_SQL = `SELECT id, public_id, genome, platform, dataset, name, reads, track_type, url, tags `
+	SelectSampleSql = `SELECT id, genome, assembly, platform, dataset, name, reads, track_type, url, tags`
 
-	TRACKS_SQL = SELECT_TRACK_SQL +
-		`FROM tracks 
-	WHERE genome = ?1 AND platform = ?2 
-	ORDER BY name`
+	TracksSql = SelectSampleSql +
+		`FROM samples 
+		WHERE genome = :genome AND platform = :platform 
+		ORDER BY name`
 
-	ALL_TRACKS_SQL = SELECT_TRACK_SQL +
-		`FROM tracks 
-	WHERE genome = ?1 
-	ORDER BY genome, platform, dataset, name`
+	AllTracksSql = SelectSampleSql +
+		`FROM samples 
+		WHERE genome = :genome
+		ORDER BY genome, platform, dataset, name`
 
-	TRACK_FROM_ID_SQL = SELECT_TRACK_SQL +
-		`FROM tracks 
-	WHERE public_id = ?1`
+	SampleFromIdSql = SelectSampleSql +
+		`FROM samples 
+		WHERE id = :id`
 
-	SEARCH_TRACKS_SQL = SELECT_TRACK_SQL +
-		`FROM tracks 
-	WHERE genome = ?1 AND (public_id = ?1 OR platform = ?1 OR dataset LIKE ?2 OR name LIKE ?2)
-	ORDER BY genome, platform, dataset, name`
+	SearchSamplesSql = SelectSampleSql +
+		`FROM samples 
+		WHERE genome = :genome AND (id = :id OR platform = :id OR dataset LIKE :q OR name LIKE :q)
+		ORDER BY genome, platform, dataset, name`
 
-	BIN_SQL = `SELECT start, end, reads 
-	FROM bins
- 	WHERE start <= ?2 AND end >= ?1
-	ORDER BY start`
+	ReadsSql = `SELECT start, end, count 
+		FROM bins
+ 		WHERE bin=:bin AND start <= :end AND end >= :start
+		ORDER BY start`
 
-	BIN_50_SQL = `SELECT start, end, reads 
-	FROM bins50
- 	WHERE start <= ?2 AND end >= ?1
-	ORDER BY start`
+	// BIN_50_SQL = `SELECT start, end, reads
+	// FROM bins50
+	// WHERE start <= ?2 AND end >= ?1
+	// ORDER BY start`
 
-	BIN_500_SQL = `SELECT start, end, reads 
-	FROM bins500
- 	WHERE start <= ?2 AND end >= ?1
-	ORDER BY start`
+	// BIN_500_SQL = `SELECT start, end, reads
+	// FROM bins500
+	// WHERE start <= ?2 AND end >= ?1
+	// ORDER BY start`
 
-	BIN_5000_SQL = `SELECT start, end, reads 
-	FROM bins5000
- 	WHERE start <= ?2 AND end >= ?1
-	ORDER BY start`
+	// BIN_5000_SQL = `SELECT start, end, reads
+	// FROM bins5000
+	// WHERE start <= ?2 AND end >= ?1
+	// ORDER BY start`
 
 	// const BIN_20_SQL = `SELECT start, end, reads
 	// 	FROM bins20
@@ -156,37 +157,37 @@ const (
 	//  	WHERE start <= ?2 AND end >= ?1
 	// 	ORDER BY start`
 
-	BIN_16_SQL = `SELECT start, end, reads 
-	FROM bins16
- 	WHERE start <= ?2 AND end >= ?1
-	ORDER BY start`
+	// BIN_16_SQL = `SELECT start, end, reads
+	// FROM bins16
+	// WHERE start <= ?2 AND end >= ?1
+	// ORDER BY start`
 
-	BIN_64_SQL = `SELECT start, end, reads 
-	FROM bins64
- 	WHERE start <= ?2 AND end >= ?1
-	ORDER BY start`
+	// BIN_64_SQL = `SELECT start, end, reads
+	// FROM bins64
+	// WHERE start <= ?2 AND end >= ?1
+	// ORDER BY start`
 
-	BIN_256_SQL = `SELECT start, end, reads 
-	FROM bins256
- 	WHERE start <= ?2 AND end >= ?1
-	ORDER BY start`
+	// BIN_256_SQL = `SELECT start, end, reads
+	// FROM bins256
+	// WHERE start <= ?2 AND end >= ?1
+	// ORDER BY start`
 
-	BIN_1024_SQL = `SELECT start, end, reads 
-	FROM bins1024
- 	WHERE start <= ?2 AND end >= ?1
-	ORDER BY start`
+	// BIN_1024_SQL = `SELECT start, end, reads
+	// FROM bins1024
+	// WHERE start <= ?2 AND end >= ?1
+	// ORDER BY start`
 
-	BIN_4096_SQL = `SELECT start, end, reads 
-	FROM bins4096
- 	WHERE start <= ?2 AND end >= ?1
-	ORDER BY start`
+	// BIN_4096_SQL = `SELECT start, end, reads
+	// FROM bins4096
+	// WHERE start <= ?2 AND end >= ?1
+	// ORDER BY start`
 
-	BIN_16384_SQL = `SELECT start, end, reads 
-	FROM bins16384
- 	WHERE start <= ?2 AND end >= ?1
-	ORDER BY start`
+	// BIN_16384_SQL = `SELECT start, end, reads
+	// FROM bins16384
+	// WHERE start <= ?2 AND end >= ?1
+	// ORDER BY start`
 
-	BPM_SQL = `SELECT scale_factor FROM bpm_scale_factors WHERE bin_size = ?1`
+	BpmSql = `SELECT bpm_scale_factor FROM bins WHERE size = :bin_size`
 )
 
 func (sdb *SeqDB) Dir() string {
@@ -194,8 +195,8 @@ func (sdb *SeqDB) Dir() string {
 }
 
 func NewSeqDB(url string) *SeqDB {
-	log.Debug().Msgf("Load db: %s", filepath.Join(url, "tracks.db?mode=ro"))
-	db := sys.Must(sql.Open(sys.Sqlite3DB, filepath.Join(url, "tracks.db?mode=ro")))
+	log.Debug().Msgf("Load db: %s", filepath.Join(url, "samples.db?mode=ro"))
+	db := sys.Must(sql.Open(sys.Sqlite3DB, filepath.Join(url, "samples.db?mode=ro")))
 
 	//x := sys.Must(db.Prepare(ALL_TRACKS_SQL))
 
@@ -212,7 +213,7 @@ func (sdb *SeqDB) Close() error {
 }
 
 func (sdb *SeqDB) Genomes() ([]string, error) {
-	rows, err := sdb.db.Query(GENOMES_SQL)
+	rows, err := sdb.db.Query(GenomesSql)
 
 	if err != nil {
 		return nil, err //fmt.Errorf("there was an error with the database query")
@@ -237,7 +238,7 @@ func (sdb *SeqDB) Genomes() ([]string, error) {
 	return ret, nil
 }
 func (sdb *SeqDB) Platforms(genome string) ([]string, error) {
-	rows, err := sdb.db.Query(PLATFORMS_SQL, genome)
+	rows, err := sdb.db.Query(PlatformsSql, genome)
 
 	if err != nil {
 		return nil, err //fmt.Errorf("there was an error with the database query")
@@ -262,8 +263,8 @@ func (sdb *SeqDB) Platforms(genome string) ([]string, error) {
 	return ret, nil
 }
 
-func (sdb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
-	rows, err := sdb.db.Query(TRACKS_SQL, genome, platform)
+func (sdb *SeqDB) Seqs(genome string, platform string) ([]Sample, error) {
+	rows, err := sdb.db.Query(TracksSql, genome, platform)
 
 	if err != nil {
 		return nil, err //fmt.Errorf("there was an error with the database query")
@@ -273,7 +274,7 @@ func (sdb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
 
 	defer rows.Close()
 
-	ret := make([]Track, 0, 10)
+	ret := make([]Sample, 0, 10)
 
 	var id uint
 	var publicId string
@@ -303,7 +304,7 @@ func (sdb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
 		tagList := strings.Split(tags, ",")
 		sort.Strings(tagList)
 
-		track := Track{PublicId: publicId,
+		track := Sample{Id: publicId,
 			Genome:    genome,
 			Platform:  platform,
 			Dataset:   dataset,
@@ -322,14 +323,14 @@ func (sdb *SeqDB) Seqs(genome string, platform string) ([]Track, error) {
 	return ret, nil
 }
 
-func (sdb *SeqDB) Search(genome string, query string) ([]Track, error) {
+func (sdb *SeqDB) Search(genome string, query string) ([]Sample, error) {
 	var rows *sql.Rows
 	var err error
 
 	if query != "" {
-		rows, err = sdb.db.Query(SEARCH_TRACKS_SQL, genome, query, fmt.Sprintf("%%%s%%", query))
+		rows, err = sdb.db.Query(SearchSamplesSql, genome, query, fmt.Sprintf("%%%s%%", query))
 	} else {
-		rows, err = sdb.db.Query(ALL_TRACKS_SQL, genome)
+		rows, err = sdb.db.Query(AllTracksSql, genome)
 	}
 
 	if err != nil {
@@ -338,22 +339,26 @@ func (sdb *SeqDB) Search(genome string, query string) ([]Track, error) {
 
 	defer rows.Close()
 
-	ret := make([]Track, 0, 10)
+	ret := make([]Sample, 0, 10)
 
-	var id uint
-	var publicId string
-	var platform string
-	var dataset string
-	var name string
-	var reads uint
-	var trackType string
 	var url string
 	var tags string
 
 	//id, uuid, genome, platform, name, reads, stat_mode, url
 
 	for rows.Next() {
-		err := rows.Scan(&id, &publicId, &genome, &platform, &dataset, &name, &reads, &trackType, &url, &tags)
+		var track Sample
+
+		err := rows.Scan(&track.Id,
+			&track.Genome,
+			&track.Assembly,
+			&track.Platform,
+			&track.Dataset,
+			&track.Name,
+			&track.Reads,
+			&track.TrackType,
+			&track.Url,
+			&tags)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
@@ -362,14 +367,7 @@ func (sdb *SeqDB) Search(genome string, query string) ([]Track, error) {
 		tagList := strings.Split(tags, ",")
 		sort.Strings(tagList)
 
-		track := Track{PublicId: publicId,
-			Genome:    genome,
-			Platform:  platform,
-			Dataset:   dataset,
-			Name:      name,
-			Reads:     reads,
-			TrackType: trackType,
-			Tags:      tagList}
+		track.Tags = tagList
 
 		if track.TrackType == "Remote BigWig" {
 			track.Url = url
@@ -381,7 +379,7 @@ func (sdb *SeqDB) Search(genome string, query string) ([]Track, error) {
 	return ret, nil
 }
 
-func (sdb *SeqDB) ReaderFromId(publicId string, binWidth int, scale float64) (*SeqReader, error) {
+func (sdb *SeqDB) ReaderFromId(sampleId string, binWidth int, scale float64) (*SeqReader, error) {
 
 	var id int
 	var platform string
@@ -395,8 +393,8 @@ func (sdb *SeqDB) ReaderFromId(publicId string, binWidth int, scale float64) (*S
 
 	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, url FROM tracks WHERE seq.publicId = ?1`
 
-	err := sdb.db.QueryRow(TRACK_FROM_ID_SQL, publicId).Scan(&id,
-		&publicId,
+	err := sdb.db.QueryRow(SampleFromIdSql, sql.Named("id", sampleId)).Scan(&id,
+		&sampleId,
 		&genome,
 		&platform,
 		&dataset,
@@ -413,7 +411,13 @@ func (sdb *SeqDB) ReaderFromId(publicId string, binWidth int, scale float64) (*S
 	tagList := strings.Split(tags, ",")
 	sort.Strings(tagList)
 
-	track := Track{PublicId: publicId, Genome: genome, Platform: platform, Dataset: dataset, Name: name, TrackType: trackType, Tags: tagList}
+	track := Sample{Id: sampleId,
+		Genome:    genome,
+		Platform:  platform,
+		Dataset:   dataset,
+		Name:      name,
+		TrackType: trackType,
+		Tags:      tagList}
 
 	if track.TrackType == "Remote bigWig" {
 		track.Url = url
@@ -426,14 +430,14 @@ func (sdb *SeqDB) ReaderFromId(publicId string, binWidth int, scale float64) (*S
 
 type SeqReader struct {
 	url             string
-	track           Track
+	track           Sample
 	binSize         int
 	defaultBinCount int
 	//reads           uint
 	//scale           float64
 }
 
-func NewSeqReader(url string, track Track, binSize int, scale float64) (*SeqReader, error) {
+func NewSeqReader(url string, track Sample, binSize int, scale float64) (*SeqReader, error) {
 
 	// path := filepath.Join(url, "track.db?mode=ro")
 
@@ -482,15 +486,15 @@ func NewSeqReader(url string, track Track, binSize int, scale float64) (*SeqRead
 // 	return filepath.Join(reader.Dir, fmt.Sprintf("bin%d", reader.BinSize), fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
 // }
 
-func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*TrackBinCounts, error) {
+func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*SampleBinCounts, error) {
 
 	//var startBin uint = (location.Start - 1) / reader.BinSize
 	//var endBin uint = (location.End - 1) / reader.BinSize
 
 	// we return something for every call, even if data not available
-	ret := TrackBinCounts{
-		PublicId: reader.track.PublicId,
-		Name:     reader.track.Name,
+	ret := SampleBinCounts{
+		Id:   reader.track.Id,
+		Name: reader.track.Name,
 		//Track:    reader.Track,
 		//Location: location,
 		//Start:    startBin*reader.BinSize + 1,
@@ -517,7 +521,7 @@ func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*TrackBinCounts
 
 	var bpm float32
 
-	err = db.QueryRow(BPM_SQL, reader.binSize).Scan(&bpm) ///endBin)
+	err = db.QueryRow(BpmSql, reader.binSize).Scan(&bpm) ///endBin)
 
 	if err != nil {
 		return &ret, err
@@ -525,26 +529,26 @@ func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*TrackBinCounts
 
 	ret.Bpm = bpm
 
-	var binSql string
+	//var binSql string
 
-	switch reader.binSize {
-	case 16:
-		binSql = BIN_16_SQL
-	case 64:
-		binSql = BIN_64_SQL
-	case 256:
-		binSql = BIN_256_SQL
-	case 1024:
-		binSql = BIN_1024_SQL
-	case 4096:
-		binSql = BIN_4096_SQL
-	default:
-		binSql = BIN_16384_SQL
-	}
+	// switch reader.binSize {
+	// case 16:
+	// 	binSql = BIN_16_SQL
+	// case 64:
+	// 	binSql = BIN_64_SQL
+	// case 256:
+	// 	binSql = BIN_256_SQL
+	// case 1024:
+	// 	binSql = BIN_1024_SQL
+	// case 4096:
+	// 	binSql = BIN_4096_SQL
+	// default:
+	// 	binSql = BIN_16384_SQL
+	// }
 
-	rows, err := db.Query(binSql,
-		location.Start(), //	startBin,
-		location.End())   ///endBin)
+	rows, err := db.Query(ReadsSql,
+		sql.Named("start", location.Start()), //	startBin,
+		sql.Named("end", location.End()))     ///endBin)
 
 	if err != nil {
 		return &ret, err

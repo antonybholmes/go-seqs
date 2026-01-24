@@ -16,7 +16,10 @@ parser.add_argument("-s", "--sample", help="sample name")
 parser.add_argument("-p", "--platform", default="ChIP-seq", help="platform")
 parser.add_argument("-b", "--bam", help="bam file")
 parser.add_argument(
-    "-g", "--genome", default="hg19", help="genome sample was aligned to"
+    "-g", "--genome", default="Human", help="genome sample was aligned to"
+)
+parser.add_argument(
+    "-a", "--assembly", default="hg19", help="assembly sample was aligned to"
 )
 parser.add_argument("-w", "--widths", default="100,1000", help="size of bin")
 parser.add_argument("-o", "--out", help="output directory")
@@ -26,6 +29,7 @@ args = parser.parse_args()
 sample = args.sample  # sys.argv[1]
 bam = args.bam  # sys.argv[2]
 genome = args.genome  # sys.argv[3]
+assembly = args.assembly
 platform = args.platform
 bin_sizes = [int(w) for w in args.widths.split(",")]
 outdir = args.out
@@ -34,13 +38,16 @@ paired = args.paired
 # lib.encode.encode_sam_16bit(chr_size_file, file, chr, read_length, window)
 
 
-print(sample, genome, bin_sizes)
+print(sample, genome, bin_sizes, assembly, platform, outdir)
+
+
 datasetId = uuid.uuid7()  #  .generate("0123456789abcdefghijklmnopqrstuvwxyz", 12)
 writer = libseq.BinCountWriter(
     datasetId,
     sample,
     bam,
     genome,
+    assembly,
     bin_sizes=bin_sizes,
     platform=platform,
     outdir=outdir,

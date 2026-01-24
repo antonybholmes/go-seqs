@@ -1,11 +1,11 @@
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE track (
-	id INTEGER PRIMARY KEY ASC,
-	public_id TEXT NOT NULL,
+CREATE TABLE sample (
+	id TEXT PRIMARY KEY,
 	platform TEXT NOT NULL,
 	genome TEXT NOT NULL,
+	assembly TEXT NOT NULL,
 	name TEXT NOT NULL,
 	chr TEXT NOT NULL,
 	reads INTEGER NOT NULL);
@@ -17,9 +17,22 @@ CREATE TABLE track (
 	-- UNIQUE(bin, reads));
 -- CREATE INDEX track_bin_idx ON track (bin);
 
-CREATE TABLE bpm_scale_factors (
-	bin_size INTEGER PRIMARY KEY,
-	scale_factor REAL NOT NULL);
+CREATE TABLE bins (
+	size INTEGER PRIMARY KEY ASC,
+	bpm INTEGER NOT NULL,
+	bpm_scale_factor REAL NOT NULL,
+	UNIQUE(size, bpm, bpm_scale_factor));
+
+CREATE TABLE reads (
+	id INTEGER PRIMARY KEY ASC,
+	bin INTEGER NOT NULL,
+	start INTEGER KEY,
+	end INTEGER NOT NULL,
+	count INTEGER NOT NULL,
+	UNIQUE(bin, start, end, count),
+	FOREIGN KEY(bin) REFERENCES bins(size) ON DELETE CASCADE);
+
+CREATE INDEX reads_bin_start_end_idx ON reads(bin, start, end);
 
 -- CREATE TABLE bins50 (
 -- 	start INTEGER PRIMARY KEY,
@@ -77,32 +90,32 @@ CREATE TABLE bpm_scale_factors (
 --         end INTEGER NOT NULL,
 --         reads INTEGER NOT NULL);
 
-CREATE TABLE bins16 (
-	start INTEGER PRIMARY KEY,
-	end INTEGER NOT NULL,
-	reads INTEGER NOT NULL);
+-- CREATE TABLE bins16 (
+-- 	start INTEGER PRIMARY KEY,
+-- 	end INTEGER NOT NULL,
+-- 	reads INTEGER NOT NULL);
 
-CREATE TABLE bins64 (
-	start INTEGER PRIMARY KEY,
-	end INTEGER NOT NULL,
-	reads INTEGER NOT NULL);
+-- CREATE TABLE bins64 (
+-- 	start INTEGER PRIMARY KEY,
+-- 	end INTEGER NOT NULL,
+-- 	reads INTEGER NOT NULL);
 
-CREATE TABLE bins256 (
-	start INTEGER PRIMARY KEY,
-	end INTEGER NOT NULL,
-	reads INTEGER NOT NULL);
+-- CREATE TABLE bins256 (
+-- 	start INTEGER PRIMARY KEY,
+-- 	end INTEGER NOT NULL,
+-- 	reads INTEGER NOT NULL);
 
-CREATE TABLE bins1024 (
-	start INTEGER PRIMARY KEY,
-	end INTEGER NOT NULL,
-	reads INTEGER NOT NULL);
+-- CREATE TABLE bins1024 (
+-- 	start INTEGER PRIMARY KEY,
+-- 	end INTEGER NOT NULL,
+-- 	reads INTEGER NOT NULL);
 
-CREATE TABLE bins4096 (
-	start INTEGER PRIMARY KEY,
-	end INTEGER NOT NULL,
-	reads INTEGER NOT NULL);
+-- CREATE TABLE bins4096 (
+-- 	start INTEGER PRIMARY KEY,
+-- 	end INTEGER NOT NULL,
+-- 	reads INTEGER NOT NULL);
 
-CREATE TABLE bins16384 (
-	start INTEGER PRIMARY KEY,
-	end INTEGER NOT NULL,
-	reads INTEGER NOT NULL);
+-- CREATE TABLE bins16384 (
+-- 	start INTEGER PRIMARY KEY,
+-- 	end INTEGER NOT NULL,
+-- 	reads INTEGER NOT NULL);
