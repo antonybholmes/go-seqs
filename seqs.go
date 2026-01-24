@@ -328,7 +328,7 @@ func (sdb *SeqDB) Search(genome string, query string) ([]Sample, error) {
 	var err error
 
 	if query != "" {
-		rows, err = sdb.db.Query(SearchSamplesSql, genome, query, fmt.Sprintf("%%%s%%", query))
+		rows, err = sdb.db.Query(SearchSamplesSql, sql.Named("genome", genome), sql.Named("id", query), sql.Named("q", fmt.Sprintf("%%%s%%", query)))
 	} else {
 		rows, err = sdb.db.Query(AllTracksSql, genome)
 	}
