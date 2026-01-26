@@ -79,7 +79,7 @@ for root, dirs, files in os.walk(dir):
                     "platform": row["platform"],
                     "name": row["name"],
                     "reads": row["reads"],
-                    "dataset": dataset["id"],
+                    "dataset_id": dataset["id"],
                     "type": "Seq",
                     "url": relative_dir,
                 }

@@ -26,18 +26,15 @@ CREATE TABLE dataset_permissions (
 
 CREATE TABLE samples (
 	id TEXT PRIMARY KEY,
-	dataset TEXT NOT NULL,
-	genome TEXT NOT NULL,
-	assembly TEXT NOT NULL,
-	platform TEXT NOT NULL,
+	dataset_id TEXT NOT NULL,
 	name TEXT NOT NULL,
 	reads INTEGER NOT NULL,
 	type TEXT NOT NULL,
 	url TEXT NOT NULL NOT NULL DEFAULT '',
 	description TEXT NOT NULL DEFAULT '',
 	tags TEXT NOT NULL DEFAULT '',
-	UNIQUE(genome, assembly, platform, dataset, name),
-	FOREIGN KEY(dataset) REFERENCES datasets(id) ON DELETE CASCADE);
+	UNIQUE(dataset_id, genome, assembly, platform, name),
+	FOREIGN KEY(dataset_id) REFERENCES datasets(id) ON DELETE CASCADE);
 CREATE INDEX samples_idx ON samples(platform, genome, assembly, name);
 CREATE INDEX samples_tags_idx ON samples(tags);
 
