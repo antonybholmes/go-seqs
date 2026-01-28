@@ -16,6 +16,7 @@ CREATE INDEX dataset_tags_idx ON datasets(tags);
 CREATE TABLE permissions (
 	id TEXT PRIMARY KEY ASC,
 	name TEXT NOT NULL);
+CREATE INDEX permissions_name_idx ON permissions(name);
 
 CREATE TABLE dataset_permissions (
 	dataset_id TEXT,
@@ -30,7 +31,7 @@ CREATE TABLE samples (
 	name TEXT NOT NULL,
 	reads INTEGER NOT NULL,
 	type TEXT NOT NULL,
-	url TEXT NOT NULL NOT NULL DEFAULT '',
+	url TEXT NOT NULL DEFAULT '',
 	description TEXT NOT NULL DEFAULT '',
 	tags TEXT NOT NULL DEFAULT '',
 	UNIQUE(dataset_id, name),

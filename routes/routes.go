@@ -87,12 +87,11 @@ func ParseSeqParamsFromPost(c *gin.Context) (*SeqParams, error) {
 // }
 
 func PlatformsRoute(c *gin.Context) {
-	middleware.JwtUserRoute(c, func(c *gin.Context, user *auth.AuthUserJwtClaims) {
+	middleware.JwtUserRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
 
 		assembly := c.Param("assembly")
 
-		platforms, err := seqdb.Platforms(assembly, user.Permissions)
-
+		platforms, err := seqdb.Platforms(assembly, isAdmin, user.Permissions)
 		if err != nil {
 			c.Error(err)
 			return
@@ -103,12 +102,12 @@ func PlatformsRoute(c *gin.Context) {
 }
 
 func PlatformDatasetsRoute(c *gin.Context) {
-	middleware.JwtUserRoute(c, func(c *gin.Context, user *auth.AuthUserJwtClaims) {
+	middleware.JwtUserRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
 
 		platform := c.Param("platform")
 		assembly := c.Param("assembly")
 
-		tracks, err := seqdb.PlatformDatasets(platform, assembly, user.Permissions)
+		tracks, err := seqdb.PlatformDatasets(platform, assembly, isAdmin, user.Permissions)
 
 		if err != nil {
 			c.Error(err)
@@ -120,7 +119,7 @@ func PlatformDatasetsRoute(c *gin.Context) {
 }
 
 func SearchSeqRoute(c *gin.Context) {
-	middleware.JwtUserRoute(c, func(c *gin.Context, user *auth.AuthUserJwtClaims) {
+	middleware.JwtUserRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
 		assembly := c.Param("assembly")
 
 		if assembly == "" {
@@ -130,7 +129,7 @@ func SearchSeqRoute(c *gin.Context) {
 
 		query := c.Query("search")
 
-		tracks, err := seqdb.Search(assembly, query, user.Permissions)
+		tracks, err := seqdb.Search(query, assembly, isAdmin, user.Permissions)
 
 		if err != nil {
 			c.Error(err)
@@ -142,7 +141,7 @@ func SearchSeqRoute(c *gin.Context) {
 }
 
 func BinsRoute(c *gin.Context) {
-	middleware.JwtUserRoute(c, func(c *gin.Context, user *auth.AuthUserJwtClaims) {
+	middleware.JwtUserRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
 		params, err := ParseSeqParamsFromPost(c)
 
 		if err != nil {

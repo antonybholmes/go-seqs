@@ -29,20 +29,20 @@ func Dir() string {
 // 	return instance.Genomes(permissions)
 // }
 
-func Platforms(assembly string, permissions []string) ([]*seqs.Platform, error) {
-	return instance.Platforms(assembly, permissions)
+func Platforms(assembly string, isAdmin bool, permissions []string) ([]*seqs.Platform, error) {
+	return instance.Platforms(assembly, isAdmin, permissions)
 }
 
-func Datasets(assembly string, permissions []string) ([]*seqs.Dataset, error) {
-	return instance.Datasets(assembly, permissions)
+func Datasets(assembly string, isAdmin bool, permissions []string) ([]*seqs.Dataset, error) {
+	return instance.Datasets(assembly, isAdmin, permissions)
 }
 
-func PlatformDatasets(platform string, assembly string, permissions []string) ([]*seqs.Dataset, error) {
-	return instance.PlatformDatasets(platform, assembly, permissions)
+func PlatformDatasets(platform string, assembly string, isAdmin bool, permissions []string) ([]*seqs.Dataset, error) {
+	return instance.PlatformDatasets(platform, assembly, isAdmin, permissions)
 }
 
-func Search(assembly string, query string, permissions []string) ([]*seqs.Dataset, error) {
-	return instance.Search(assembly, query, permissions)
+func Search(query string, assembly string, isAdmin bool, permissions []string) ([]*seqs.Dataset, error) {
+	return instance.Search(query, assembly, isAdmin, permissions)
 }
 
 func ReaderFromId(publicId string, binWidth int, scale float64) (*seqs.SeqReader, error) {
