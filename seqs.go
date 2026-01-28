@@ -37,8 +37,8 @@ type (
 	}
 
 	Dataset struct {
-		Id string `json:"id"`
-		//Genome   string    `json:"genome"`
+		Id       string    `json:"id"`
+		Genome   string    `json:"genome"`
 		Assembly string    `json:"assembly"`
 		Platform string    `json:"platform"`
 		Name     string    `json:"name"`
@@ -119,14 +119,6 @@ const (
 
 	//const TRACK_SQL = `SELECT name, reads FROM track`
 
-	SelectSampleSql = `SELECT
-		s.id,
-		s.name,  
-		s.reads, 
-		s.type, 
-		s.url, 
-		s.tags`
-
 	CanViewSampleSql = `SELECT
 		s.id
 		FROM samples s
@@ -135,8 +127,15 @@ const (
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE
 			s.id = :id AND
-			p.name IN (<<PERMISSIONS>>)
-			`
+			p.name IN (<<PERMISSIONS>>)`
+
+	SelectSampleSql = `SELECT
+		s.id,
+		s.name,  
+		s.reads, 
+		s.type, 
+		s.url, 
+		s.tags`
 
 	DatasetSamplesSql = SelectSampleSql +
 		` FROM samples s
@@ -151,6 +150,7 @@ const (
 
 	BaseSearchSamplesSql = `SELECT
 		d.id as dataset_id,
+		d.genome,
 		d.platform, 	
 		d.name as dataset_name,
 		s.id as sample_id,
@@ -444,6 +444,7 @@ func (sdb *SeqDB) Search(query string, assembly string, permissions []string) ([
 	//id, uuid, genome, platform, name, reads, stat_mode, url
 
 	var datasetId string
+	var genome string
 	var platform string
 	var name string
 	var tags string
@@ -455,6 +456,7 @@ func (sdb *SeqDB) Search(query string, assembly string, permissions []string) ([
 
 		err := rows.Scan(
 			&datasetId,
+			&genome,
 			&platform,
 			&name,
 			&sample.Id,
@@ -471,6 +473,7 @@ func (sdb *SeqDB) Search(query string, assembly string, permissions []string) ([
 		if dataset == nil || dataset.Id != datasetId {
 			dataset = &Dataset{
 				Id:       datasetId,
+				Genome:   genome,
 				Assembly: assembly,
 				Platform: platform,
 				Name:     name,

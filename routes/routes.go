@@ -8,6 +8,7 @@ import (
 	"github.com/antonybholmes/go-seqs/seqdb"
 	"github.com/antonybholmes/go-sys/log"
 	"github.com/antonybholmes/go-web"
+	"github.com/antonybholmes/go-web/auth"
 	"github.com/antonybholmes/go-web/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -86,131 +87,112 @@ func ParseSeqParamsFromPost(c *gin.Context) (*SeqParams, error) {
 // }
 
 func PlatformsRoute(c *gin.Context) {
-	user, err := middleware.GetJwtUser(c)
+	middleware.JwtUserRoute(c, func(c *gin.Context, user *auth.AuthUserJwtClaims) {
 
-	if err != nil {
-		c.Error(err)
-		return
-	}
+		assembly := c.Param("assembly")
 
-	assembly := c.Param("assembly")
+		platforms, err := seqdb.Platforms(assembly, user.Permissions)
 
-	platforms, err := seqdb.Platforms(assembly, user.Permissions)
+		if err != nil {
+			c.Error(err)
+			return
+		}
 
-	if err != nil {
-		c.Error(err)
-		return
-	}
-
-	web.MakeDataResp(c, "", platforms)
+		web.MakeDataResp(c, "", platforms)
+	})
 }
 
 func PlatformDatasetsRoute(c *gin.Context) {
-	user, err := middleware.GetJwtUser(c)
+	middleware.JwtUserRoute(c, func(c *gin.Context, user *auth.AuthUserJwtClaims) {
 
-	if err != nil {
-		c.Error(err)
-		return
-	}
+		platform := c.Param("platform")
+		assembly := c.Param("assembly")
 
-	platform := c.Param("platform")
-	assembly := c.Param("assembly")
+		tracks, err := seqdb.PlatformDatasets(platform, assembly, user.Permissions)
 
-	tracks, err := seqdb.PlatformDatasets(platform, assembly, user.Permissions)
+		if err != nil {
+			c.Error(err)
+			return
+		}
 
-	if err != nil {
-		c.Error(err)
-		return
-	}
-
-	web.MakeDataResp(c, "", tracks)
+		web.MakeDataResp(c, "", tracks)
+	})
 }
 
 func SearchSeqRoute(c *gin.Context) {
-	user, err := middleware.GetJwtUser(c)
+	middleware.JwtUserRoute(c, func(c *gin.Context, user *auth.AuthUserJwtClaims) {
+		assembly := c.Param("assembly")
 
-	if err != nil {
-		c.Error(err)
-		return
-	}
+		if assembly == "" {
+			web.BadReqResp(c, ErrNoGenomeSupplied)
+			return
+		}
 
-	assembly := c.Param("assembly")
+		query := c.Query("search")
 
-	if assembly == "" {
-		web.BadReqResp(c, ErrNoGenomeSupplied)
-		return
-	}
+		tracks, err := seqdb.Search(assembly, query, user.Permissions)
 
-	query := c.Query("search")
+		if err != nil {
+			c.Error(err)
+			return
+		}
 
-	tracks, err := seqdb.Search(assembly, query, user.Permissions)
-
-	if err != nil {
-		c.Error(err)
-		return
-	}
-
-	web.MakeDataResp(c, "", tracks)
+		web.MakeDataResp(c, "", tracks)
+	})
 }
 
 func BinsRoute(c *gin.Context) {
+	middleware.JwtUserRoute(c, func(c *gin.Context, user *auth.AuthUserJwtClaims) {
+		params, err := ParseSeqParamsFromPost(c)
 
-	user, err := middleware.GetJwtUser(c)
-
-	if err != nil {
-		c.Error(err)
-		return
-	}
-
-	params, err := ParseSeqParamsFromPost(c)
-
-	if err != nil {
-		log.Debug().Msgf("err %s", err)
-		c.Error(err)
-		return
-	}
-
-	//log.Debug().Msgf("bin %v %v", params.Locations, params.BinSizes)
-
-	ret := make([]*SeqResp, 0, len(params.Locations)) //make([]*seq.BinCounts, 0, len(params.Tracks))
-
-	for li, location := range params.Locations {
-		resp := SeqResp{Location: location, Samples: make([]*seq.SampleBinCounts, 0, len(params.Samples))}
-
-		for _, sample := range params.Samples {
-			err := seqdb.CanViewSample(sample, user.Permissions)
-
-			if err != nil {
-				//log.Debug().Msgf("no permission for sample %s: %s", sample, err)
-				continue
-			}
-
-			reader, err := seqdb.ReaderFromId(sample,
-				params.BinSizes[li],
-				params.Scale)
-
-			if err != nil {
-				//log.Debug().Msgf("stupid err %s", err)
-				c.Error(err)
-				return
-			}
-
-			// guarantees something is returned even with error
-			// so we can ignore the errors for now to make the api
-			// more robus
-			sampleBinCounts, _ := reader.SampleBinCounts(location)
-
-			// if err != nil {
-			// 	return web.ErrorReq(err)
-			// }
-
-			resp.Samples = append(resp.Samples, sampleBinCounts)
+		if err != nil {
+			log.Debug().Msgf("err %s", err)
+			c.Error(err)
+			return
 		}
 
-		ret = append(ret, &resp)
-	}
+		//log.Debug().Msgf("bin %v %v", params.Locations, params.BinSizes)
 
-	//log.Debug().Msgf("ret %v", len(ret))
+		ret := make([]*SeqResp, 0, len(params.Locations)) //make([]*seq.BinCounts, 0, len(params.Tracks))
 
-	web.MakeDataResp(c, "", ret)
+		for li, location := range params.Locations {
+			resp := SeqResp{Location: location, Samples: make([]*seq.SampleBinCounts, 0, len(params.Samples))}
+
+			for _, sample := range params.Samples {
+				err := seqdb.CanViewSample(sample, user.Permissions)
+
+				if err != nil {
+					//log.Debug().Msgf("no permission for sample %s: %s", sample, err)
+					continue
+				}
+
+				reader, err := seqdb.ReaderFromId(sample,
+					params.BinSizes[li],
+					params.Scale)
+
+				if err != nil {
+					//log.Debug().Msgf("stupid err %s", err)
+					c.Error(err)
+					return
+				}
+
+				// guarantees something is returned even with error
+				// so we can ignore the errors for now to make the api
+				// more robus
+				sampleBinCounts, _ := reader.SampleBinCounts(location)
+
+				// if err != nil {
+				// 	return web.ErrorReq(err)
+				// }
+
+				resp.Samples = append(resp.Samples, sampleBinCounts)
+			}
+
+			ret = append(ret, &resp)
+		}
+
+		//log.Debug().Msgf("ret %v", len(ret))
+
+		web.MakeDataResp(c, "", ret)
+	})
 }
