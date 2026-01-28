@@ -10,7 +10,7 @@ CREATE TABLE datasets (
 	description TEXT NOT NULL DEFAULT '',
 	tags TEXT NOT NULL DEFAULT '',
 	UNIQUE(genome, assembly, platform, name));
-CREATE INDEX datasets_idx ON datasets(platform, genome, assembly, name);
+CREATE INDEX datasets_idx ON datasets(genome, assembly, platform, name);
 CREATE INDEX dataset_tags_idx ON datasets(tags);
 
 CREATE TABLE permissions (
@@ -33,9 +33,9 @@ CREATE TABLE samples (
 	url TEXT NOT NULL NOT NULL DEFAULT '',
 	description TEXT NOT NULL DEFAULT '',
 	tags TEXT NOT NULL DEFAULT '',
-	UNIQUE(dataset_id, genome, assembly, platform, name),
+	UNIQUE(dataset_id, name),
 	FOREIGN KEY(dataset_id) REFERENCES datasets(id) ON DELETE CASCADE);
-CREATE INDEX samples_idx ON samples(platform, genome, assembly, name);
+CREATE INDEX samples_name_idx ON samples(name);
 CREATE INDEX samples_tags_idx ON samples(tags);
 
 

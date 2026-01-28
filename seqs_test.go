@@ -14,15 +14,15 @@ func TestWithin(t *testing.T) {
 		t.Fatalf(`err %s`, err)
 	}
 
-	track := Sample{Platform: "ChIP-seq", Genome: "hg19", Name: "CB4_BCL6_RK040"}
+	track := "00000000-0000-0000-0000-000000000001"
 
-	reader, err := NewSeqReader("/home/antony/development/data/modules/tracks/", track, 100, 0)
+	reader, err := NewSeqReader("/home/antony/development/data/modules/seqs/", track, 100, 0)
 
 	if err != nil {
 		t.Fatalf(`err %s`, err)
 	}
 
-	binCounts, err := reader.TrackBinCounts(location)
+	binCounts, err := reader.SampleBinCounts(location)
 
 	if err != nil {
 		t.Fatalf(`err %s`, err)

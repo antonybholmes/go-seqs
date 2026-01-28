@@ -15,39 +15,34 @@ import (
 )
 
 type (
-	SeqBin struct {
+	ReadBin struct {
 		Start int `json:"s"`
 		End   int `json:"e"`
-		Reads int `json:"r"`
+		Count int `json:"c"`
 	}
 
 	SampleBinCounts struct {
-		Id   string `json:"id"`
-		Name string `json:"name"`
-		//Chr string `json:"chr"`
-		//Track    Track         `json:"track"`
-		//Location *dna.Location `json:"loc"`
-		//Bins []*SeqBin `json:"bins"`
-		Bins [][]int `json:"bins"`
-		YMax int     `json:"ymax"`
-		//Start    uint          `json:"start"`
-		BinSize int     `json:"binSize"`
-		Bpm     float32 `json:"bpmScaleFactor"`
+		Id string `json:"id"`
+		//Name    string     `json:"name"`
+		Bins    []*ReadBin `json:"bins"`
+		YMax    int        `json:"ymax"`
+		BinSize int        `json:"binSize"`
+		Bpm     float32    `json:"bpmScaleFactor"`
 	}
 
-	// type Sample struct {
-	// 	Genome   string `json:"genome"`
-	// 	Platform string `json:"platform"`
-	// 	Dataset  string `json:"dataset"`
-	// 	Name     string `json:"name"`
-	// }
-
-	Dataset struct {
-		Id       string `json:"id"`
+	Platform struct {
 		Genome   string `json:"genome"`
 		Assembly string `json:"assembly"`
 		Platform string `json:"platform"`
-		Name     string `json:"name"`
+	}
+
+	Dataset struct {
+		Id string `json:"id"`
+		//Genome   string    `json:"genome"`
+		Assembly string    `json:"assembly"`
+		Platform string    `json:"platform"`
+		Name     string    `json:"name"`
+		Samples  []*Sample `json:"samples"`
 	}
 
 	Sample struct {
@@ -76,52 +71,121 @@ type (
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
 const (
-	GenomesSql   = `SELECT DISTINCT genome FROM datasets ORDER BY genome`
-	PlatformsSql = `SELECT DISTINCT platform FROM datasets WHERE genome = :genome ORDER BY platform`
+	PlatformsSql = `SELECT DISTINCT
+		d.id,
+		d.genome,
+		d.assembly, 
+		d.platform
+		FROM datasets d
+		JOIN dataset_permissions dp ON d.id = dp.dataset_id
+		JOIN permissions p ON dp.permission_id = p.id
+		WHERE 
+			p.name IN (<<PERMISSIONS>>)
+		ORDER BY
+			d.genome,
+			d.assembly,
+			d.platform`
+
+	DatasetsSql = `SELECT DISTINCT
+		d.id,
+		d.assembly, 
+		d.platform, 	
+		d.name
+		FROM datasets d
+		JOIN dataset_permissions dp ON d.id = dp.dataset_id
+		JOIN permissions p ON dp.permission_id = p.id
+		WHERE 
+			p.name IN (<<PERMISSIONS>>)
+			AND d.assembly = :assembly
+		ORDER BY 
+			d.genome,
+			d.assembly`
+
+	PlatformDatasetsSql = `SELECT DISTINCT
+		d.id,
+		d.assembly, 
+		d.platform, 	
+		d.name
+		FROM datasets d
+		JOIN dataset_permissions dp ON d.id = dp.dataset_id
+		JOIN permissions p ON dp.permission_id = p.id
+		WHERE 
+			p.name IN (<<PERMISSIONS>>)
+			AND d.platform = :platform
+			AND d.assembly = :assembly
+		ORDER BY 
+			d.genome,
+			d.assembly`
 
 	//const TRACK_SQL = `SELECT name, reads FROM track`
 
-	SelectSampleSql = `SELECT 
-		d.id as dataset_id,
-		d.genome, 
-		d.assembly, 
-		d.platform, 	
-		d.name as dataset_name,
+	SelectSampleSql = `SELECT
 		s.id,
-		s.name, 
+		s.name,  
 		s.reads, 
 		s.type, 
 		s.url, 
 		s.tags`
 
-	SamplesSql = SelectSampleSql +
+	CanViewSampleSql = `SELECT
+		s.id
+		FROM samples s
+		JOIN datasets d ON s.dataset_id = d.id
+		JOIN dataset_permissions dp ON d.id = dp.dataset_id
+		JOIN permissions p ON dp.permission_id = p.id
+		WHERE
+			s.id = :id AND
+			p.name IN (<<PERMISSIONS>>)
+			`
+
+	DatasetSamplesSql = SelectSampleSql +
 		` FROM samples s
 		JOIN datasets d ON s.dataset_id = d.id 
-		WHERE d.genome = :genome AND d.platform = :platform 
+		WHERE d.id = :id
 		ORDER BY s.name`
-
-	AllSamplesSql = SelectSampleSql +
-		` FROM samples s 
-		JOIN datasets d ON s.dataset_id = d.id
-		WHERE d.genome = :genome
-		ORDER BY 
-			d.genome, 
-			d.platform, 
-			d.name, 
-			s.name`
 
 	SampleFromIdSql = SelectSampleSql +
 		` FROM samples s 
 		JOIN datasets d ON s.dataset_id = d.id
 		WHERE id = :id`
 
-	SearchSamplesSql = SelectSampleSql +
-		` FROM samples s
+	BaseSearchSamplesSql = `SELECT
+		d.id as dataset_id,
+		d.platform, 	
+		d.name as dataset_name,
+		s.id as sample_id,
+		s.name as sample_name,  
+		s.reads, 
+		s.type, 
+		s.url, 
+		s.tags
+		FROM samples s
 		JOIN datasets d ON s.dataset_id = d.id
+		JOIN dataset_permissions dp ON d.id = dp.dataset_id
+		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
-			genome = :genome AND 
-			(id = :id OR d.platform = :id OR d.dataset LIKE :q OR s.name LIKE :q)
-		ORDER BY d.genome, d.platform, d.name, s.name`
+			p.name IN (<<PERMISSIONS>>)
+			AND d.assembly = :assembly`
+
+	AllSamplesSql = BaseSearchSamplesSql +
+		` ORDER BY 
+			d.platform, 
+			d.name, 
+			s.name`
+
+	SearchSamplesSql = BaseSearchSamplesSql +
+		` AND (s.id = :id OR d.id = :id OR d.platform = :id OR d.name LIKE :q OR s.name LIKE :q)
+		ORDER BY 
+			d.platform, 
+			d.name, 
+			s.name`
+
+	SearchPlatformSamplesSql = BaseSearchSamplesSql +
+		` AND d.platform = :platform
+		AND (s.id = :id OR d.id = :id OR d.name LIKE :q OR s.name LIKE :q)
+		ORDER BY
+			d.name, 
+			s.name`
 
 	ReadsSql = `SELECT start, end, count 
 		FROM bins
@@ -148,8 +212,63 @@ func (sdb *SeqDB) Close() error {
 	return sdb.db.Close()
 }
 
-func (sdb *SeqDB) Genomes() ([]string, error) {
-	rows, err := sdb.db.Query(GenomesSql)
+// func (sdb *SeqDB) Genomes(permissions []string) ([]string, error) {
+// 	rows, err := sdb.db.Query(DatasetsSql)
+
+// 	if err != nil {
+// 		return nil, err //fmt.Errorf("there was an error with the database query")
+// 	}
+
+// 	defer rows.Close()
+
+// 	ret := make([]string, 0, 10)
+
+// 	var genome string
+
+// 	for rows.Next() {
+// 		err := rows.Scan(&genome)
+
+// 		if err != nil {
+// 			return nil, err //fmt.Errorf("there was an error with the database records")
+// 		}
+
+// 		ret = append(ret, genome)
+// 	}
+
+// 	return ret, nil
+// }
+
+func (sdb *SeqDB) CanViewSample(sampleId string, permissions []string) error {
+	namedArgs := []any{sql.Named("id", sampleId)}
+
+	inClause := makePermissionsInClause(permissions, &namedArgs)
+
+	query := strings.Replace(CanViewSampleSql, "<<PERMISSIONS>>", inClause, 1)
+
+	var id string
+	err := sdb.db.QueryRow(query, namedArgs...).Scan(&id)
+
+	// no rows means no permission
+	if err != nil {
+		return err
+	}
+
+	// sanity
+	if id != sampleId {
+		return fmt.Errorf("permission denied to view sample %s", sampleId)
+	}
+
+	return nil
+}
+
+func (sdb *SeqDB) Platforms(assembly string, permissions []string) ([]*Platform, error) {
+	namedArgs := make([]any, 0, len(permissions))
+
+	inClause := makePermissionsInClause(permissions, &namedArgs)
+
+	query := strings.Replace(PlatformsSql, "<<PERMISSIONS>>", inClause, 1)
+
+	rows, err := sdb.db.Query(query, namedArgs...)
 
 	if err != nil {
 		return nil, err //fmt.Errorf("there was an error with the database query")
@@ -157,24 +276,36 @@ func (sdb *SeqDB) Genomes() ([]string, error) {
 
 	defer rows.Close()
 
-	ret := make([]string, 0, 10)
-
-	var genome string
+	ret := make([]*Platform, 0, 10)
 
 	for rows.Next() {
-		err := rows.Scan(&genome)
+		var platform Platform
+
+		err := rows.Scan(&platform.Genome,
+			&platform.Assembly,
+			&platform.Platform)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		ret = append(ret, genome)
+		ret = append(ret, &platform)
 	}
 
 	return ret, nil
 }
-func (sdb *SeqDB) Platforms(genome string) ([]string, error) {
-	rows, err := sdb.db.Query(PlatformsSql, genome)
+
+func (sdb *SeqDB) Datasets(assembly string, permissions []string) ([]*Dataset, error) {
+	// build sql.Named args
+	namedArgs := []any{sql.Named("assembly", assembly)}
+
+	inClause := makePermissionsInClause(permissions, &namedArgs)
+
+	query := strings.Replace(DatasetsSql, "<<PERMISSIONS>>", inClause, 1)
+
+	// execute query
+
+	rows, err := sdb.db.Query(query, namedArgs...)
 
 	if err != nil {
 		return nil, err //fmt.Errorf("there was an error with the database query")
@@ -182,31 +313,71 @@ func (sdb *SeqDB) Platforms(genome string) ([]string, error) {
 
 	defer rows.Close()
 
-	ret := make([]string, 0, 10)
-
-	var platform string
+	ret := make([]*Dataset, 0, 10)
 
 	for rows.Next() {
-		err := rows.Scan(&platform)
+		var dataset Dataset
+
+		err := rows.Scan(&dataset.Id,
+			&dataset.Assembly,
+			&dataset.Platform,
+			&dataset.Name)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		ret = append(ret, platform)
+		ret = append(ret, &dataset)
 	}
 
 	return ret, nil
 }
 
-func (sdb *SeqDB) Seqs(genome string, platform string) ([]*Sample, error) {
-	rows, err := sdb.db.Query(SamplesSql, genome, platform)
+func (sdb *SeqDB) PlatformDatasets(platform string, assembly string, permissions []string) ([]*Dataset, error) {
+	// build sql.Named args
+
+	namedArgs := []any{sql.Named("assembly", assembly), sql.Named("platform", platform)}
+
+	inClause := makePermissionsInClause(permissions, &namedArgs)
+
+	query := strings.Replace(DatasetsSql, "<<PERMISSIONS>>", inClause, 1)
+
+	// execute query
+
+	rows, err := sdb.db.Query(query, namedArgs...)
 
 	if err != nil {
 		return nil, err //fmt.Errorf("there was an error with the database query")
 	}
 
 	defer rows.Close()
+
+	ret := make([]*Dataset, 0, 10)
+
+	for rows.Next() {
+		var dataset Dataset
+
+		err := rows.Scan(&dataset.Id,
+			&dataset.Assembly,
+			&dataset.Platform,
+			&dataset.Name)
+
+		if err != nil {
+			return nil, err //fmt.Errorf("there was an error with the database records")
+		}
+
+		ret = append(ret, &dataset)
+	}
+
+	return ret, nil
+}
+
+func (sdb *SeqDB) Samples(datasetId string) ([]*Sample, error) {
+	rows, err := sdb.db.Query(DatasetSamplesSql, sql.Named("id", datasetId))
+
+	if err != nil {
+		return nil, err //fmt.Errorf("there was an error with the database query")
+	}
 
 	defer rows.Close()
 
@@ -225,17 +396,41 @@ func (sdb *SeqDB) Seqs(genome string, platform string) ([]*Sample, error) {
 	return ret, nil
 }
 
-func (sdb *SeqDB) Search(genome string, query string) ([]*Sample, error) {
+func (sdb *SeqDB) Search(query string, assembly string, permissions []string) ([]*Dataset, error) {
+
 	var rows *sql.Rows
 	var err error
 
 	if query != "" {
-		rows, err = sdb.db.Query(SearchSamplesSql,
-			sql.Named("genome", genome),
+
+		namedParams := []any{sql.Named("assembly", assembly),
 			sql.Named("id", query),
-			sql.Named("q", fmt.Sprintf("%%%s%%", query)))
+			sql.Named("q", fmt.Sprintf("%%%s%%", query))}
+
+		inClause := makePermissionsInClause(permissions, &namedParams)
+
+		// if platform != "" {
+		// 	// platform specific search
+		// 	rows, err = sdb.db.Query(SearchPlatformSamplesSql,
+		// 		sql.Named("assembly", assembly),
+		// 		sql.Named("platform", platform),
+		// 		sql.Named("id", query),
+		// 		sql.Named("q", fmt.Sprintf("%%%s%%", query)))
+
+		// } else {
+		//search all platforms within assembly
+		rows, err = sdb.db.Query(strings.Replace(SearchSamplesSql, "<<PERMISSIONS>>", inClause, 1),
+			namedParams...)
+		//}
 	} else {
-		rows, err = sdb.db.Query(AllSamplesSql, genome)
+		namedParams := []any{sql.Named("assembly", assembly)}
+
+		inClause := makePermissionsInClause(permissions, &namedParams)
+
+		log.Debug().Msgf("search all samples sql %s", strings.Replace(AllSamplesSql, "<<PERMISSIONS>>", inClause, 1))
+
+		rows, err = sdb.db.Query(strings.Replace(AllSamplesSql, "<<PERMISSIONS>>", inClause, 1),
+			namedParams...)
 	}
 
 	if err != nil {
@@ -244,25 +439,53 @@ func (sdb *SeqDB) Search(genome string, query string) ([]*Sample, error) {
 
 	defer rows.Close()
 
-	ret := make([]*Sample, 0, 10)
+	datasets := make([]*Dataset, 0, 10)
 
 	//id, uuid, genome, platform, name, reads, stat_mode, url
 
+	var datasetId string
+	var platform string
+	var name string
+	var tags string
+
+	var dataset *Dataset
+
 	for rows.Next() {
-		sample, err := rowsToSample(rows)
+		var sample Sample
+
+		err := rows.Scan(
+			&datasetId,
+			&platform,
+			&name,
+			&sample.Id,
+			&sample.Name,
+			&sample.Reads,
+			&sample.Type,
+			&sample.Url,
+			&tags)
 
 		if err != nil {
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		// if sample.Type == "Remote BigWig" {
-		// 	sample.Url = url
-		// }
+		if dataset == nil || dataset.Id != datasetId {
+			dataset = &Dataset{
+				Id:       datasetId,
+				Assembly: assembly,
+				Platform: platform,
+				Name:     name,
+				Samples:  make([]*Sample, 0, 10),
+			}
 
-		ret = append(ret, sample)
+			datasets = append(datasets, dataset)
+		}
+
+		sample.Tags = tagsToList(tags)
+
+		dataset.Samples = append(dataset.Samples, &sample)
 	}
 
-	return ret, nil
+	return datasets, nil
 }
 
 func (sdb *SeqDB) ReaderFromId(sampleId string, binWidth int, scale float64) (*SeqReader, error) {
@@ -281,19 +504,19 @@ func (sdb *SeqDB) ReaderFromId(sampleId string, binWidth int, scale float64) (*S
 
 	url = filepath.Join(sdb.url, url)
 
-	return NewSeqReader(url, sample, binWidth, scale)
+	return NewSeqReader(sample.Id, url, binWidth, scale)
 }
 
 type SeqReader struct {
+	sampleId        string
 	url             string
-	sample          *Sample
 	binSize         int
 	defaultBinCount int
 	//reads           uint
 	//scale           float64
 }
 
-func NewSeqReader(url string, sample *Sample, binSize int, scale float64) (*SeqReader, error) {
+func NewSeqReader(sampleId string, url string, binSize int, scale float64) (*SeqReader, error) {
 
 	// path := filepath.Join(url, "track.db?mode=ro")
 
@@ -328,11 +551,12 @@ func NewSeqReader(url string, sample *Sample, binSize int, scale float64) (*SeqR
 	// 	return nil, fmt.Errorf("could not count reads")
 	// }
 
-	return &SeqReader{url: url,
-		binSize: binSize,
+	return &SeqReader{
+		sampleId: sampleId,
+		url:      url,
+		binSize:  binSize,
 		// estimate the number of bins to represent a region
 		defaultBinCount: binSize * 4,
-		sample:          sample,
 	}, nil
 }
 
@@ -340,20 +564,20 @@ func NewSeqReader(url string, sample *Sample, binSize int, scale float64) (*SeqR
 // 	return filepath.Join(reader.Dir, fmt.Sprintf("bin%d", reader.BinSize), fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
 // }
 
-func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*SampleBinCounts, error) {
+func (reader *SeqReader) SampleBinCounts(location *dna.Location) (*SampleBinCounts, error) {
 
 	//var startBin uint = (location.Start - 1) / reader.BinSize
 	//var endBin uint = (location.End - 1) / reader.BinSize
 
 	// we return something for every call, even if data not available
 	ret := SampleBinCounts{
-		Id:   reader.sample.Id,
-		Name: reader.sample.Name,
+		Id: reader.sampleId,
+		//Name: reader.sample.Name,
 		//Track:    reader.Track,
 		//Location: location,
 		//Start:    startBin*reader.BinSize + 1,
 		//Chr:     location.Chr,
-		Bins:    make([][]int, 0, reader.defaultBinCount),
+		Bins:    make([]*ReadBin, 0, reader.defaultBinCount),
 		YMax:    0,
 		BinSize: reader.binSize,
 		Bpm:     0,
@@ -408,27 +632,39 @@ func (reader *SeqReader) TrackBinCounts(location *dna.Location) (*SampleBinCount
 		return &ret, err
 	}
 
-	var readStart int
-	var readEnd int
-	var reads int
-
 	for rows.Next() {
+		var bin ReadBin
 		// read the location
-		err := rows.Scan(&readStart, &readEnd, &reads)
+		err := rows.Scan(&bin.Start, &bin.End, &bin.Count)
 
 		if err != nil {
 			return &ret, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		// to reduce data overhead, return 3 element array of start, end and read count
-		ret.Bins = append(ret.Bins, []int{readStart, readEnd, reads})
+		ret.Bins = append(ret.Bins, &bin)
 	}
 
 	for _, bin := range ret.Bins {
-		ret.YMax = basemath.Max(ret.YMax, bin[2])
+		ret.YMax = basemath.Max(ret.YMax, bin.Count)
 	}
 
 	return &ret, nil
+}
+
+// Creates the IN clause for permissions and appends named args
+// for use in sql query so it can be done in a safe way
+func makePermissionsInClause(permissions []string, namedArgs *[]any) string {
+	inPlaceholders := make([]string, len(permissions))
+
+	for i := range permissions {
+		inPlaceholders[i] = fmt.Sprintf(":perm%d", i+1)
+	}
+
+	for i, perm := range permissions {
+		*namedArgs = append(*namedArgs, sql.Named(fmt.Sprintf("perm%d", i+1), perm))
+	}
+
+	return strings.Join(inPlaceholders, ",")
 }
 
 func rowsToSample(rows *sql.Rows) (*Sample, error) {
@@ -446,10 +682,7 @@ func rowsToSample(rows *sql.Rows) (*Sample, error) {
 		return nil, err //fmt.Errorf("there was an error with the database records")
 	}
 
-	tagList := strings.Split(tags, ",")
-	sort.Strings(tagList)
-
-	sample.Tags = tagList
+	sample.Tags = tagsToList(tags)
 
 	return &sample, nil
 }
@@ -469,10 +702,18 @@ func rowToSample(rows *sql.Row) (*Sample, error) {
 		return nil, err //fmt.Errorf("there was an error with the database records")
 	}
 
-	tagList := strings.Split(tags, ",")
-	sort.Strings(tagList)
-
-	sample.Tags = tagList
+	sample.Tags = tagsToList(tags)
 
 	return &sample, nil
+}
+
+func tagsToList(tags string) []string {
+	tagList := strings.Split(tags, ",")
+	sort.Strings(tagList)
+	// trim
+	for i, tag := range tagList {
+		tagList[i] = strings.TrimSpace(tag)
+	}
+
+	return tagList
 }

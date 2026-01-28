@@ -21,19 +21,19 @@ type (
 		Locations []string `json:"locations"`
 		Scale     float64  `json:"scale"`
 		BinSizes  []int    `json:"binSizes"`
-		Tracks    []string `json:"tracks"`
+		Samples   []string `json:"samples"`
 	}
 
 	SeqParams struct {
 		Locations []*dna.Location
 		Scale     float64
 		BinSizes  []int
-		Tracks    []string
+		Samples   []string
 	}
 
 	SeqResp struct {
 		Location *dna.Location          `json:"location"`
-		Tracks   []*seq.SampleBinCounts `json:"tracks"`
+		Samples  []*seq.SampleBinCounts `json:"samples"`
 	}
 )
 
@@ -62,29 +62,40 @@ func ParseSeqParamsFromPost(c *gin.Context) (*SeqParams, error) {
 	return &SeqParams{
 			Locations: locations,
 			BinSizes:  params.BinSizes,
-			Tracks:    params.Tracks,
+			Samples:   params.Samples,
 			Scale:     params.Scale},
 		nil
 }
 
-func userHasPermissionToViewDataset(c *gin.Context, datasetId string) error {
+// func GenomesRoute(c *gin.Context) {
+// 	user, err := middleware.GetJwtUser(c)
+
+// 	if err != nil {
+// 		c.Error(err)
+// 		return
+// 	}
+
+// 	platforms, err := seqdb.Genomes(user.Permissions)
+
+// 	if err != nil {
+// 		c.Error(err)
+// 		return
+// 	}
+
+// 	web.MakeDataResp(c, "", platforms)
+// }
+
+func PlatformsRoute(c *gin.Context) {
 	user, err := middleware.GetJwtUser(c)
 
 	if err != nil {
-		return err
+		c.Error(err)
+		return
 	}
 
-	err = seqdb.HasPermissionToViewDataset(datasetId, user.Permissions)
+	assembly := c.Param("assembly")
 
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func GenomeRoute(c *gin.Context) {
-	platforms, err := seqdb.Genomes()
+	platforms, err := seqdb.Platforms(assembly, user.Permissions)
 
 	if err != nil {
 		c.Error(err)
@@ -94,24 +105,18 @@ func GenomeRoute(c *gin.Context) {
 	web.MakeDataResp(c, "", platforms)
 }
 
-func PlatformRoute(c *gin.Context) {
-	genome := c.Param("assembly")
-
-	platforms, err := seqdb.Platforms(genome)
+func PlatformDatasetsRoute(c *gin.Context) {
+	user, err := middleware.GetJwtUser(c)
 
 	if err != nil {
 		c.Error(err)
 		return
 	}
 
-	web.MakeDataResp(c, "", platforms)
-}
-
-func TracksRoute(c *gin.Context) {
 	platform := c.Param("platform")
-	genome := c.Param("assembly")
+	assembly := c.Param("assembly")
 
-	tracks, err := seqdb.Tracks(platform, genome)
+	tracks, err := seqdb.PlatformDatasets(platform, assembly, user.Permissions)
 
 	if err != nil {
 		c.Error(err)
@@ -122,16 +127,23 @@ func TracksRoute(c *gin.Context) {
 }
 
 func SearchSeqRoute(c *gin.Context) {
-	genome := c.Param("assembly")
+	user, err := middleware.GetJwtUser(c)
 
-	if genome == "" {
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	assembly := c.Param("assembly")
+
+	if assembly == "" {
 		web.BadReqResp(c, ErrNoGenomeSupplied)
 		return
 	}
 
 	query := c.Query("search")
 
-	tracks, err := seqdb.Search(genome, query)
+	tracks, err := seqdb.Search(assembly, query, user.Permissions)
 
 	if err != nil {
 		c.Error(err)
@@ -142,6 +154,13 @@ func SearchSeqRoute(c *gin.Context) {
 }
 
 func BinsRoute(c *gin.Context) {
+
+	user, err := middleware.GetJwtUser(c)
+
+	if err != nil {
+		c.Error(err)
+		return
+	}
 
 	params, err := ParseSeqParamsFromPost(c)
 
@@ -156,10 +175,17 @@ func BinsRoute(c *gin.Context) {
 	ret := make([]*SeqResp, 0, len(params.Locations)) //make([]*seq.BinCounts, 0, len(params.Tracks))
 
 	for li, location := range params.Locations {
-		resp := SeqResp{Location: location, Tracks: make([]*seq.SampleBinCounts, 0, len(params.Tracks))}
+		resp := SeqResp{Location: location, Samples: make([]*seq.SampleBinCounts, 0, len(params.Samples))}
 
-		for _, track := range params.Tracks {
-			reader, err := seqdb.ReaderFromId(track,
+		for _, sample := range params.Samples {
+			err := seqdb.CanViewSample(sample, user.Permissions)
+
+			if err != nil {
+				//log.Debug().Msgf("no permission for sample %s: %s", sample, err)
+				continue
+			}
+
+			reader, err := seqdb.ReaderFromId(sample,
 				params.BinSizes[li],
 				params.Scale)
 
@@ -172,13 +198,13 @@ func BinsRoute(c *gin.Context) {
 			// guarantees something is returned even with error
 			// so we can ignore the errors for now to make the api
 			// more robus
-			trackBinCounts, _ := reader.TrackBinCounts(location)
+			sampleBinCounts, _ := reader.SampleBinCounts(location)
 
 			// if err != nil {
 			// 	return web.ErrorReq(err)
 			// }
 
-			resp.Tracks = append(resp.Tracks, trackBinCounts)
+			resp.Samples = append(resp.Samples, sampleBinCounts)
 		}
 
 		ret = append(ret, &resp)

@@ -66,7 +66,7 @@ with open(out, "w") as fout:
                 url = tokens[1]
                 id = uuid.uuid7()
                 print(
-                    f"INSERT INTO samples (id, dataset, genome, assembly, platform, name, reads, dataset, type, url, tags) VALUES ('{id}', '{dataset_id}', '{genome}', '{assembly}', '{platform}', '{name}', 0, '{dataset_id  }', 'Remote BigWig', '{url}', 'scale={scale}');",
+                    f"INSERT INTO samples (id, dataset_id, name, reads, type, url, tags) VALUES ('{id}', '{dataset_id}', '{name}', -1, 'Remote BigWig', '{url}', 'scale={scale}');",
                     file=fout,
                 )
     print("COMMIT;", file=fout)

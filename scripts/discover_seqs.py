@@ -118,12 +118,9 @@ with open(os.path.join(dir, "samples.sql"), "w") as f:
     for row in data:
 
         print(
-            f"""INSERT INTO samples (id, dataset, genome, assembly, platform, name, reads, type, url) VALUES (
+            f"""INSERT INTO samples (id, dataset_id, name, reads, type, url) VALUES (
                 '{row["id"]}',
-                '{row["dataset"]}',
-                '{row["genome"]}',
-                '{row["assembly"]}',
-                '{row["platform"]}',
+                '{row["dataset_id"]}',
                 '{row["name"]}',
                 {row["reads"]},
                 '{row["type"]}',

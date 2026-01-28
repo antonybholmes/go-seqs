@@ -25,26 +25,30 @@ func Dir() string {
 	return instance.Dir()
 }
 
-func Genomes() ([]string, error) {
-	return instance.Genomes()
+// func Genomes(permissions []string) ([]string, error) {
+// 	return instance.Genomes(permissions)
+// }
+
+func Platforms(assembly string, permissions []string) ([]*seqs.Platform, error) {
+	return instance.Platforms(assembly, permissions)
 }
 
-func Platforms(genome string) ([]string, error) {
-	return instance.Platforms(genome)
+func Datasets(assembly string, permissions []string) ([]*seqs.Dataset, error) {
+	return instance.Datasets(assembly, permissions)
 }
 
-func Tracks(platform string, genome string) ([]seqs.Sample, error) {
-	return instance.Seqs(platform, genome)
+func PlatformDatasets(platform string, assembly string, permissions []string) ([]*seqs.Dataset, error) {
+	return instance.PlatformDatasets(platform, assembly, permissions)
 }
 
-func Search(genome string, query string) ([]seqs.Sample, error) {
-	return instance.Search(genome, query)
+func Search(assembly string, query string, permissions []string) ([]*seqs.Dataset, error) {
+	return instance.Search(assembly, query, permissions)
 }
 
 func ReaderFromId(publicId string, binWidth int, scale float64) (*seqs.SeqReader, error) {
 	return instance.ReaderFromId(publicId, binWidth, scale)
 }
 
-func HasPermissionToViewDataset(datasetId string, permissions []string) error {
-	return instance.HasPermissionToViewDataset(datasetId, permissions)
+func CanViewSample(sampleId string, permissions []string) error {
+	return instance.CanViewSample(sampleId, permissions)
 }
