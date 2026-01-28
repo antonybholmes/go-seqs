@@ -656,12 +656,10 @@ func (reader *SeqReader) SampleBinCounts(location *dna.Location) (*SampleBinCoun
 func makePermissionsInClause(permissions []string, namedArgs *[]any) string {
 	inPlaceholders := make([]string, len(permissions))
 
-	for i := range permissions {
-		inPlaceholders[i] = fmt.Sprintf(":perm%d", i+1)
-	}
-
 	for i, perm := range permissions {
-		*namedArgs = append(*namedArgs, sql.Named(fmt.Sprintf("perm%d", i+1), perm))
+		ph := fmt.Sprintf(":perm%d", i+1)
+		inPlaceholders[i] = ph
+		*namedArgs = append(*namedArgs, sql.Named(ph, perm))
 	}
 
 	return strings.Join(inPlaceholders, ",")
