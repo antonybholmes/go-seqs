@@ -52,7 +52,7 @@ writer = libseq.BinCountWriter(
     platform=platform,
     outdir=outdir,
 )
-writer.write_all_chr_sql(paired=paired)
+writer.write_sample_sql(paired=paired)
 
 # writer = libseq.BinCountWriter("CB4_BCL6_RK040_hg19.sorted.rmdup.bam", "hg19", bin_width=1000)
 # writer.write_all_chr_sql()

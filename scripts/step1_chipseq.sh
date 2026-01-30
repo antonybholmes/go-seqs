@@ -13,8 +13,8 @@ do
     echo ${sample}
     echo ${bam}
 
-    outdir=${dir}/${dataset}/${sample}
-    #python bamtosql.py --sample=${sample} --bam=${bam} --assembly=${assembly} --genome=${genome} --widths=${bin_widths} --out=${outdir}
+    outdir=${dir}/${dataset} #/${sample}
+    python bamtosql.py --sample=${sample} --bam=${bam} --assembly=${assembly} --genome=${genome} --widths=${bin_widths} --out=${outdir}
     ./step2_create_db.sh ${sample} ${outdir}
-    #break
+    break
 done

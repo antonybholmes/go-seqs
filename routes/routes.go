@@ -150,7 +150,7 @@ func BinsRoute(c *gin.Context) {
 			return
 		}
 
-		//log.Debug().Msgf("bin %v %v", params.Locations, params.BinSizes)
+		log.Debug().Msgf("bin %v %v %v", params.Locations, params.BinSizes, params.Samples)
 
 		ret := make([]*SeqResp, 0, len(params.Locations)) //make([]*seq.BinCounts, 0, len(params.Tracks))
 
@@ -158,10 +158,10 @@ func BinsRoute(c *gin.Context) {
 			resp := SeqResp{Location: location, Samples: make([]*seq.SampleBinCounts, 0, len(params.Samples))}
 
 			for _, sample := range params.Samples {
-				err := seqdb.CanViewSample(sample, user.Permissions)
+				err := seqdb.CanViewSample(sample, isAdmin, user.Permissions)
 
 				if err != nil {
-					//log.Debug().Msgf("no permission for sample %s: %s", sample, err)
+					log.Debug().Msgf("no permission for sample %s: %s", sample, err)
 					continue
 				}
 
@@ -170,7 +170,7 @@ func BinsRoute(c *gin.Context) {
 					params.Scale)
 
 				if err != nil {
-					//log.Debug().Msgf("stupid err %s", err)
+					log.Debug().Msgf("stupid err %s", err)
 					c.Error(err)
 					return
 				}

@@ -55,7 +55,7 @@ type (
 		Type     string   `json:"type"`
 		Url      string   `json:"url"`
 		Tags     []string `json:"tags"`
-		Reads    uint     `json:"reads"`
+		Reads    int      `json:"reads"`
 	}
 
 	SeqDB struct {
@@ -148,7 +148,7 @@ const (
 		ORDER BY s.name`
 
 	SampleFromIdSql = SelectSampleSql +
-		` WHERE id = :id`
+		` WHERE s.id = :id`
 
 	BaseSearchSamplesSql = SelectSampleSql +
 		` JOIN dataset_permissions dp ON d.id = dp.dataset_id
@@ -177,12 +177,12 @@ const (
 			d.name, 
 			s.name`
 
+	BpmSql = `SELECT bpm_scale_factor FROM bins WHERE size = :bin_size`
+
 	ReadsSql = `SELECT start, end, count 
-		FROM bins
+		FROM reads
  		WHERE bin=:bin AND start <= :end AND end >= :start
 		ORDER BY start`
-
-	BpmSql = `SELECT bpm_scale_factor FROM bins WHERE size = :bin_size`
 )
 
 func (sdb *SeqDB) Dir() string {
@@ -228,8 +228,8 @@ func (sdb *SeqDB) Close() error {
 // 	return ret, nil
 // }
 
-func (sdb *SeqDB) CanViewSample(sampleId string, permissions []string) error {
-	namedArgs := []any{sql.Named("id", sampleId)}
+func (sdb *SeqDB) CanViewSample(sampleId string, isAdmin bool, permissions []string) error {
+	namedArgs := []any{sql.Named("id", sampleId), sql.Named("is_admin", isAdmin)}
 
 	inClause := MakePermissionsInClause(permissions, &namedArgs)
 
@@ -388,7 +388,7 @@ func (sdb *SeqDB) Samples(datasetId string) ([]*Sample, error) {
 	return ret, nil
 }
 
-func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permissions []string) ([]*Dataset, error) {
+func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permissions []string) ([]*Sample, error) {
 
 	var rows *sql.Rows
 	var err error
@@ -433,17 +433,19 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 
 	defer rows.Close()
 
-	datasets := make([]*Dataset, 0, 10)
+	//datasets := make([]*Dataset, 0, 10)
 
 	//id, uuid, genome, platform, name, reads, stat_mode, url
 
-	var datasetId string
-	var genome string
-	var platform string
-	var name string
-	var tags string
+	//var datasetId string
+	//var genome string
+	//var platform string
+	//var name string
+	//var tags string
 
-	var dataset *Dataset
+	//var dataset *Dataset
+
+	ret := make([]*Sample, 0, 10)
 
 	for rows.Next() {
 		sample, err := rowsToSample(rows)
@@ -452,25 +454,26 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 			return nil, err //fmt.Errorf("there was an error with the database records")
 		}
 
-		if dataset == nil || dataset.Id != datasetId {
-			dataset = &Dataset{
-				Id:       datasetId,
-				Genome:   genome,
-				Assembly: assembly,
-				Platform: platform,
-				Name:     name,
-				Samples:  make([]*Sample, 0, 10),
-			}
+		// if dataset == nil || dataset.Id != datasetId {
+		// 	dataset = &Dataset{
+		// 		Id:       datasetId,
+		// 		Genome:   genome,
+		// 		Assembly: assembly,
+		// 		Platform: platform,
+		// 		Name:     name,
+		// 		Samples:  make([]*Sample, 0, 10),
+		// 	}
 
-			datasets = append(datasets, dataset)
-		}
+		// 	datasets = append(datasets, dataset)
+		// }
 
-		sample.Tags = TagsToList(tags)
+		//sample.Tags = TagsToList(tags)
 
-		dataset.Samples = append(dataset.Samples, sample)
+		//dataset.Samples = append(dataset.Samples, sample)
+		ret = append(ret, sample)
 	}
 
-	return datasets, nil
+	return ret, nil
 }
 
 func (sdb *SeqDB) ReaderFromId(sampleId string, binWidth int, scale float64) (*SeqReader, error) {
@@ -569,7 +572,7 @@ func (reader *SeqReader) SampleBinCounts(location *dna.Location) (*SampleBinCoun
 	path := filepath.Join(reader.url,
 		fmt.Sprintf("%s.db?mode=ro", location.Chr()))
 
-	//log.Debug().Msgf("track path %s", path)
+	log.Debug().Msgf("track path %s", path)
 
 	db, err := sql.Open(sys.Sqlite3DB, path)
 
@@ -585,6 +588,7 @@ func (reader *SeqReader) SampleBinCounts(location *dna.Location) (*SampleBinCoun
 	err = db.QueryRow(BpmSql, reader.binSize).Scan(&bpm) ///endBin)
 
 	if err != nil {
+		log.Debug().Msgf("error scale factor %s %s", path, err)
 		return &ret, err
 	}
 
@@ -608,10 +612,12 @@ func (reader *SeqReader) SampleBinCounts(location *dna.Location) (*SampleBinCoun
 	// }
 
 	rows, err := db.Query(ReadsSql,
+		sql.Named("bin", reader.binSize),
 		sql.Named("start", location.Start()), //	startBin,
 		sql.Named("end", location.End()))     ///endBin)
 
 	if err != nil {
+		log.Debug().Msgf("error reading reads %s %s", path, err)
 		return &ret, err
 	}
 

@@ -41,7 +41,7 @@ func PlatformDatasets(platform string, assembly string, isAdmin bool, permission
 	return instance.PlatformDatasets(platform, assembly, isAdmin, permissions)
 }
 
-func Search(query string, assembly string, isAdmin bool, permissions []string) ([]*seqs.Dataset, error) {
+func Search(query string, assembly string, isAdmin bool, permissions []string) ([]*seqs.Sample, error) {
 	return instance.Search(query, assembly, isAdmin, permissions)
 }
 
@@ -49,6 +49,6 @@ func ReaderFromId(publicId string, binWidth int, scale float64) (*seqs.SeqReader
 	return instance.ReaderFromId(publicId, binWidth, scale)
 }
 
-func CanViewSample(sampleId string, permissions []string) error {
-	return instance.CanViewSample(sampleId, permissions)
+func CanViewSample(sampleId string, isAdmin bool, permissions []string) error {
+	return instance.CanViewSample(sampleId, isAdmin, permissions)
 }
