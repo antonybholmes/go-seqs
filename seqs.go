@@ -11,6 +11,7 @@ import (
 	"github.com/antonybholmes/go-dna"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/log"
+	"github.com/antonybholmes/go-web/auth/sqlite"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -24,10 +25,10 @@ type (
 	SampleBinCounts struct {
 		Id string `json:"id"`
 		//Name    string     `json:"name"`
-		Bins    []*ReadBin `json:"bins"`
-		YMax    int        `json:"ymax"`
-		BinSize int        `json:"binSize"`
-		Bpm     float32    `json:"bpmScaleFactor"`
+		Bins           []*ReadBin `json:"bins"`
+		YMax           int        `json:"ymax"`
+		BinSize        int        `json:"binSize"`
+		BpmScaleFactor float64    `json:"bpmScaleFactor"`
 	}
 
 	Platform struct {
@@ -179,10 +180,17 @@ const (
 
 	BpmSql = `SELECT bpm_scale_factor FROM bins WHERE size = :bin_size`
 
-	ReadsSql = `SELECT start, end, count 
-		FROM reads
- 		WHERE bin=:bin AND start <= :end AND end >= :start
-		ORDER BY start`
+	ReadsSql = `SELECT 
+		r.start, 
+		r.end, 
+		r.count 
+		FROM reads r
+		JOIN chromosomes c ON r.chr_id = c.id
+ 		WHERE c.name = :chr 
+			AND r.bin = :bin 
+			AND r.start <= :end 
+			AND r.end >= :start
+		ORDER BY r.start`
 )
 
 func (sdb *SeqDB) Dir() string {
@@ -231,7 +239,7 @@ func (sdb *SeqDB) Close() error {
 func (sdb *SeqDB) CanViewSample(sampleId string, isAdmin bool, permissions []string) error {
 	namedArgs := []any{sql.Named("id", sampleId), sql.Named("is_admin", isAdmin)}
 
-	inClause := MakePermissionsInClause(permissions, &namedArgs)
+	inClause := sqlite.MakePermissionsInClause(permissions, &namedArgs)
 
 	query := strings.Replace(CanViewSampleSql, "<<PERMISSIONS>>", inClause, 1)
 
@@ -254,7 +262,7 @@ func (sdb *SeqDB) CanViewSample(sampleId string, isAdmin bool, permissions []str
 func (sdb *SeqDB) Platforms(assembly string, isAdmin bool, permissions []string) ([]*Platform, error) {
 	namedArgs := []any{sql.Named("assembly", assembly), sql.Named("is_admin", isAdmin)}
 
-	inClause := MakePermissionsInClause(permissions, &namedArgs)
+	inClause := sqlite.MakePermissionsInClause(permissions, &namedArgs)
 
 	query := strings.Replace(PlatformsSql, "<<PERMISSIONS>>", inClause, 1)
 
@@ -289,7 +297,7 @@ func (sdb *SeqDB) Datasets(assembly string, isAdmin bool, permissions []string) 
 	// build sql.Named args
 	namedArgs := []any{sql.Named("assembly", assembly), sql.Named("is_admin", isAdmin)}
 
-	inClause := MakePermissionsInClause(permissions, &namedArgs)
+	inClause := sqlite.MakePermissionsInClause(permissions, &namedArgs)
 
 	query := strings.Replace(DatasetsSql, "<<PERMISSIONS>>", inClause, 1)
 
@@ -330,7 +338,7 @@ func (sdb *SeqDB) PlatformDatasets(platform string, assembly string, isAdmin boo
 		sql.Named("platform", platform),
 		sql.Named("is_admin", isAdmin)}
 
-	inClause := MakePermissionsInClause(permissions, &namedArgs)
+	inClause := sqlite.MakePermissionsInClause(permissions, &namedArgs)
 
 	query := strings.Replace(DatasetsSql, "<<PERMISSIONS>>", inClause, 1)
 
@@ -401,7 +409,7 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 			sql.Named("is_admin", isAdmin),
 		}
 
-		inClause := MakePermissionsInClause(permissions, &namedParams)
+		inClause := sqlite.MakePermissionsInClause(permissions, &namedParams)
 
 		// if platform != "" {
 		// 	// platform specific search
@@ -419,9 +427,9 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 	} else {
 		namedParams := []any{sql.Named("assembly", assembly), sql.Named("is_admin", isAdmin)}
 
-		inClause := MakePermissionsInClause(permissions, &namedParams)
+		inClause := sqlite.MakePermissionsInClause(permissions, &namedParams)
 
-		log.Debug().Msgf("search all samples sql %s", strings.Replace(AllSamplesSql, "<<PERMISSIONS>>", inClause, 1))
+		//log.Debug().Msgf("search all samples sql %s", strings.Replace(AllSamplesSql, "<<PERMISSIONS>>", inClause, 1))
 
 		rows, err = sdb.db.Query(strings.Replace(AllSamplesSql, "<<PERMISSIONS>>", inClause, 1),
 			namedParams...)
@@ -550,7 +558,7 @@ func NewSeqReader(sampleId string, url string, binSize int, scale float64) (*Seq
 // 	return filepath.Join(reader.Dir, fmt.Sprintf("bin%d", reader.BinSize), fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
 // }
 
-func (reader *SeqReader) SampleBinCounts(location *dna.Location) (*SampleBinCounts, error) {
+func (reader *SeqReader) BinCounts(location *dna.Location) (*SampleBinCounts, error) {
 
 	//var startBin uint = (location.Start - 1) / reader.BinSize
 	//var endBin uint = (location.End - 1) / reader.BinSize
@@ -563,14 +571,16 @@ func (reader *SeqReader) SampleBinCounts(location *dna.Location) (*SampleBinCoun
 		//Location: location,
 		//Start:    startBin*reader.BinSize + 1,
 		//Chr:     location.Chr,
-		Bins:    make([]*ReadBin, 0, reader.defaultBinCount),
-		YMax:    0,
-		BinSize: reader.binSize,
-		Bpm:     0,
+		Bins:           make([]*ReadBin, 0, reader.defaultBinCount),
+		YMax:           0,
+		BinSize:        reader.binSize,
+		BpmScaleFactor: 0,
 	}
 
-	path := filepath.Join(reader.url,
-		fmt.Sprintf("%s.db?mode=ro", location.Chr()))
+	// path := filepath.Join(reader.url,
+	// 	fmt.Sprintf("%s.db?mode=ro", location.Chr()))
+
+	path := filepath.Join(reader.url + "?mode=ro")
 
 	log.Debug().Msgf("track path %s", path)
 
@@ -583,16 +593,16 @@ func (reader *SeqReader) SampleBinCounts(location *dna.Location) (*SampleBinCoun
 
 	defer db.Close()
 
-	var bpm float32
+	var scaleFactor float64
 
-	err = db.QueryRow(BpmSql, reader.binSize).Scan(&bpm) ///endBin)
+	err = db.QueryRow(BpmSql, reader.binSize).Scan(&scaleFactor) ///endBin)
 
 	if err != nil {
 		log.Debug().Msgf("error scale factor %s %s", path, err)
 		return &ret, err
 	}
 
-	ret.Bpm = bpm
+	ret.BpmScaleFactor = scaleFactor
 
 	//var binSql string
 
@@ -612,6 +622,7 @@ func (reader *SeqReader) SampleBinCounts(location *dna.Location) (*SampleBinCoun
 	// }
 
 	rows, err := db.Query(ReadsSql,
+		sql.Named("chr", location.Chr()),
 		sql.Named("bin", reader.binSize),
 		sql.Named("start", location.Start()), //	startBin,
 		sql.Named("end", location.End()))     ///endBin)
@@ -642,17 +653,17 @@ func (reader *SeqReader) SampleBinCounts(location *dna.Location) (*SampleBinCoun
 
 // Creates the IN clause for permissions and appends named args
 // for use in sql query so it can be done in a safe way
-func MakePermissionsInClause(permissions []string, namedArgs *[]any) string {
-	inPlaceholders := make([]string, len(permissions))
+// func MakePermissionsInClause(permissions []string, namedArgs *[]any) string {
+// 	inPlaceholders := make([]string, len(permissions))
 
-	for i, perm := range permissions {
-		ph := fmt.Sprintf("perm%d", i+1)
-		inPlaceholders[i] = ":" + ph
-		*namedArgs = append(*namedArgs, sql.Named(ph, perm))
-	}
+// 	for i, perm := range permissions {
+// 		ph := fmt.Sprintf("perm%d", i+1)
+// 		inPlaceholders[i] = ":" + ph
+// 		*namedArgs = append(*namedArgs, sql.Named(ph, perm))
+// 	}
 
-	return strings.Join(inPlaceholders, ",")
-}
+// 	return strings.Join(inPlaceholders, ",")
+// }
 
 func rowsToSample(rows *sql.Rows) (*Sample, error) {
 	var sample Sample

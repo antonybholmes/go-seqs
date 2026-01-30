@@ -9,9 +9,15 @@
 sample=$1
 dir=$2
 
-rm ${dir}/sample.db
-cat sample.sql | sqlite3 ${dir}/sample.db
-cat ${dir}/sample.sql | sqlite3 ${dir}/sample.db
+rm ${dir}/${sample}.db #sample.db
+cat sample.sql | sqlite3 ${dir}/${sample}.db
+cat ${dir}/${sample}_header.sql | sqlite3 ${dir}/${sample}.db
+cat ${dir}/${sample}.sql | sqlite3 ${dir}/${sample}.db
+
+
+#rm ${dir}/${sample}.db #sample.db
+#cat sample.sql | sqlite3 ${dir}/${sample}.db
+#cat ${dir}/${sample}.sql | sqlite3 ${dir}/${sample}.db
 
 # for f in `find ${dir} | grep -P 'track_bin.+sql$' | sort`
 # do
@@ -24,12 +30,12 @@ cat ${dir}/sample.sql | sqlite3 ${dir}/sample.db
 # done
 
 #for f in `find ${dir} | grep -P 'chr.+sql$' | sort`
-for f in `find ${dir} | grep -P 'chr.+sql$' | grep -v 'track_bin' | sort`
-do
-	echo ${f}
-	db=`echo ${f} | sed -r 's/sql/db/'`
-	echo ${db}
-	rm ${db}
-	cat bins.sql | sqlite3 ${db}
-	cat ${f} | sqlite3 ${db}
-done
+# for f in `find ${dir} | grep -P 'chr.+sql$' | grep -v 'track_bin' | sort`
+# do
+# 	echo ${f}
+# 	db=`echo ${f} | sed -r 's/sql/db/'`
+# 	echo ${db}
+# 	rm ${db}
+# 	cat bins.sql | sqlite3 ${db}
+# 	cat ${f} | sqlite3 ${db}
+# done

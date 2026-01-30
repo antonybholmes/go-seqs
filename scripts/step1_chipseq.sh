@@ -14,7 +14,17 @@ do
     echo ${bam}
 
     outdir=${dir}/${dataset} #/${sample}
+    cat sample.sql > ${outdir}/${sample}.sql
+    echo >> ${outdir}/${sample}.sql
+    echo >> ${outdir}/${sample}.sql
     python bamtosql.py --sample=${sample} --bam=${bam} --assembly=${assembly} --genome=${genome} --widths=${bin_widths} --out=${outdir}
+    
+    #rm ${outdir}/${sample}.db #sample.db
+    #cat sample.sql | sqlite3 ${outdir}/${sample}.db
+    #cat ${outdir}/${sample}_header.sql | sqlite3 ${outdir}/${sample}.db
+    #cat ${outdir}/${sample}.sql | sqlite3 ${outdir}/${sample}.db
+
     ./step2_create_db.sh ${sample} ${outdir}
-    break
+
+    #break
 done

@@ -29,68 +29,79 @@ data = []
 datasets = {}
 
 for root, dirs, files in os.walk(dir):
+    if "trash" in root:
+        continue
+
     for filename in files:
-        if filename == "sample.db":
-            relative_dir = root.replace(dir, "")[1:]
+        if filename == "samples.db":
+            continue
 
-            print(relative_dir)
+        if filename == "tracks.db":
+            continue
 
-            assembly, platform, dataset_name, sample = relative_dir.split("/")
+        if not filename.endswith(".db"):
+            continue
 
-            genome = genome_map.get(assembly.lower(), assembly)
+        relative_dir = root.replace(dir, "")[1:]
 
-            dataset_name = dataset_name.replace("_", " ")
+        print(relative_dir, filename)
 
-            if dataset_name not in datasets:
-                dataset_id = uuid.uuid7()
-                datasets[dataset_name] = {
-                    "id": dataset_id,
-                    "name": dataset_name,
-                    "platform": platform,
-                    "genome": genome,
-                    "assembly": assembly,
-                }
+        assembly, platform, dataset_name = relative_dir.split("/")
 
-            dataset = datasets[dataset_name]
+        sample = filename.replace(".db", "")
 
-            # filepath = os.path.join(root, filename)
-            print(root, filename, relative_dir, platform, genome, dataset, sample)
+        genome = genome_map.get(assembly.lower(), assembly)
 
-            conn = sqlite3.connect(os.path.join(root, filename))
-            conn.row_factory = sqlite3.Row
+        dataset_name = dataset_name.replace("_", " ")
 
-            # Create a cursor object
-            cursor = conn.cursor()
+        if dataset_name not in datasets:
+            dataset_id = uuid.uuid7()
+            datasets[dataset_name] = {
+                "id": dataset_id,
+                "name": dataset_name,
+                "platform": platform,
+                "genome": genome,
+                "assembly": assembly,
+            }
 
-            # Execute a query to fetch data
-            cursor.execute(
-                "SELECT id, genome, assembly, platform, name, reads FROM sample"
-            )
+        dataset = datasets[dataset_name]
 
-            # Fetch all results
-            results = cursor.fetchall()
+        # filepath = os.path.join(root, filename)
+        print(root, filename, relative_dir, platform, genome, dataset, sample)
 
-            # Print the results
-            for row in results:
-                row = {
-                    "id": row["id"],
-                    "genome": row["genome"],
-                    "assembly": row["assembly"],
-                    "platform": row["platform"],
-                    "name": row["name"],
-                    "reads": row["reads"],
-                    "dataset_id": dataset["id"],
-                    "type": "Seq",
-                    "url": relative_dir,
-                }
-                # row.append(generate("0123456789abcdefghijklmnopqrstuvwxyz", 12))
-                # row.append(dataset["id"])
-                # row.append("Seq")
-                # row.append(relative_dir)
-                # row.append(dataset)
-                data.append(row)
+        conn = sqlite3.connect(os.path.join(root, filename))
+        conn.row_factory = sqlite3.Row
 
-            conn.close()
+        # Create a cursor object
+        cursor = conn.cursor()
+
+        # Execute a query to fetch data
+        cursor.execute("SELECT id, genome, assembly, platform, name, reads FROM sample")
+
+        # Fetch all results
+        results = cursor.fetchall()
+
+        # Print the results
+        for row in results:
+            row = {
+                "id": row["id"],
+                "genome": row["genome"],
+                "assembly": row["assembly"],
+                "platform": row["platform"],
+                "name": row["name"],
+                "reads": row["reads"],
+                "dataset_id": dataset["id"],
+                "type": "Seq",
+                "url": os.path.join(relative_dir, filename),  # where to find the sql db
+            }
+            # row.append(generate("0123456789abcdefghijklmnopqrstuvwxyz", 12))
+            # row.append(dataset["id"])
+            # row.append("Seq")
+            # row.append(relative_dir)
+            # row.append(dataset)
+            data.append(row)
+
+        conn.close()
 
 with open(os.path.join(dir, "samples.sql"), "w") as f:
 

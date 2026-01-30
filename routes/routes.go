@@ -87,7 +87,7 @@ func ParseSeqParamsFromPost(c *gin.Context) (*SeqParams, error) {
 // }
 
 func PlatformsRoute(c *gin.Context) {
-	middleware.JwtUserRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
+	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
 
 		assembly := c.Param("assembly")
 
@@ -102,7 +102,7 @@ func PlatformsRoute(c *gin.Context) {
 }
 
 func PlatformDatasetsRoute(c *gin.Context) {
-	middleware.JwtUserRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
+	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
 
 		platform := c.Param("platform")
 		assembly := c.Param("assembly")
@@ -119,7 +119,7 @@ func PlatformDatasetsRoute(c *gin.Context) {
 }
 
 func SearchSeqRoute(c *gin.Context) {
-	middleware.JwtUserRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
+	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
 		assembly := c.Param("assembly")
 
 		if assembly == "" {
@@ -141,7 +141,7 @@ func SearchSeqRoute(c *gin.Context) {
 }
 
 func BinsRoute(c *gin.Context) {
-	middleware.JwtUserRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
+	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
 		params, err := ParseSeqParamsFromPost(c)
 
 		if err != nil {
@@ -170,7 +170,7 @@ func BinsRoute(c *gin.Context) {
 					params.Scale)
 
 				if err != nil {
-					log.Debug().Msgf("stupid err %s", err)
+
 					c.Error(err)
 					return
 				}
@@ -178,7 +178,7 @@ func BinsRoute(c *gin.Context) {
 				// guarantees something is returned even with error
 				// so we can ignore the errors for now to make the api
 				// more robus
-				sampleBinCounts, _ := reader.SampleBinCounts(location)
+				sampleBinCounts, _ := reader.BinCounts(location)
 
 				// if err != nil {
 				// 	return web.ErrorReq(err)

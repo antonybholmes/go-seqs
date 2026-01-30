@@ -10,20 +10,25 @@ CREATE TABLE sample (
 	reads INTEGER NOT NULL);
 
 CREATE TABLE bins (
-	chr TEXT NOT NULL,
-	size INTEGER PRIMARY KEY ASC,
-	bpm INTEGER NOT NULL,
+	id INTEGER PRIMARY KEY,
+	size INTEGER NOT NULL,
+	reads INTEGER NOT NULL,
 	bpm_scale_factor REAL NOT NULL,
-	UNIQUE(size, bpm, bpm_scale_factor));
+	UNIQUE(size, reads, bpm_scale_factor));
+
+CREATE TABLE chromosomes (
+    id INTEGER PRIMARY KEY,
+    name TEXT UNIQUE
+);
 
 CREATE TABLE reads (
-	id INTEGER PRIMARY KEY ASC,
-	chr TEXT NOT NULL,
+	chr_id INTEGER NOT NULL,
 	bin INTEGER NOT NULL,
 	start INTEGER NOT NULL,
 	end INTEGER NOT NULL,
 	count INTEGER NOT NULL,
-	UNIQUE(chr, bin, start, end, count),
+	PRIMARY KEY (chr_id, bin, start),
+	FOREIGN KEY(chr_id) REFERENCES chromosomes(id),
 	FOREIGN KEY(bin) REFERENCES bins(size) ON DELETE CASCADE);
 
-CREATE INDEX reads_chr_bin_start_end_idx ON reads(chr, bin, start, end);
+-- CREATE INDEX reads_chr_bin_start_end_idx ON reads(chr, bin, start, end);
