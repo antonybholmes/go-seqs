@@ -41,7 +41,7 @@ func PlatformDatasets(platform string, assembly string, isAdmin bool, permission
 	return instance.PlatformDatasets(platform, assembly, isAdmin, permissions)
 }
 
-func Search(query string, assembly string, isAdmin bool, permissions []string) ([]*seqs.Sample, error) {
+func SearchSamples(query string, assembly string, isAdmin bool, permissions []string) ([]*seqs.Sample, error) {
 	return instance.Search(query, assembly, isAdmin, permissions)
 }
 

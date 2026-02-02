@@ -129,7 +129,7 @@ func SearchSeqRoute(c *gin.Context) {
 
 		query := c.Query("search")
 
-		tracks, err := seqdb.Search(query, assembly, isAdmin, user.Permissions)
+		tracks, err := seqdb.SearchSamples(query, assembly, isAdmin, user.Permissions)
 
 		if err != nil {
 			c.Error(err)

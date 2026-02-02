@@ -89,6 +89,7 @@ const (
 
 	DatasetsSql = `SELECT DISTINCT
 		d.id,
+		d.genome,
 		d.assembly, 
 		d.platform, 	
 		d.name
@@ -358,6 +359,7 @@ func (sdb *SeqDB) PlatformDatasets(platform string, assembly string, isAdmin boo
 		var dataset Dataset
 
 		err := rows.Scan(&dataset.Id,
+			&dataset.Genome,
 			&dataset.Assembly,
 			&dataset.Platform,
 			&dataset.Name)
