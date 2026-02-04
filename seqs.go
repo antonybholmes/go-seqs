@@ -104,7 +104,7 @@ const (
 			d.assembly`
 
 	PlatformDatasetsSql = `SELECT DISTINCT
-		d.id,
+		d.uuid,
 		d.assembly, 
 		d.platform, 	
 		d.name
@@ -122,17 +122,17 @@ const (
 	//const TRACK_SQL = `SELECT name, reads FROM track`
 
 	CanViewSampleSql = `SELECT
-		s.id
+		s.uuid
 		FROM samples s
 		JOIN datasets d ON s.dataset_id = d.id
 		JOIN dataset_permissions dp ON d.id = dp.dataset_id
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE
-			s.id = :id AND
+			s.uuid = :id AND
 			(:is_admin = 1 OR p.name IN (<<PERMISSIONS>>))`
 
 	SelectSampleSql = `SELECT
-		s.id,
+		s.uuid,
 		d.genome,
 		d.assembly,
 		d.platform, 	

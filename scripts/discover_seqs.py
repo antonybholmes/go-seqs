@@ -28,6 +28,8 @@ data = []
 
 datasets = {}
 
+dataset_index = 0
+
 for root, dirs, files in os.walk(dir):
     if "trash" in root:
         continue
@@ -56,12 +58,14 @@ for root, dirs, files in os.walk(dir):
 
         if dataset_name not in datasets:
             dataset_id = uuid.uuid7()
+            dataset_index += 1
             datasets[dataset_name] = {
                 "id": dataset_id,
                 "name": dataset_name,
                 "platform": platform,
                 "genome": genome,
                 "assembly": assembly,
+                "index": dataset_index,
             }
 
         dataset = datasets[dataset_name]
@@ -91,6 +95,7 @@ for root, dirs, files in os.walk(dir):
                 "name": row["name"],
                 "reads": row["reads"],
                 "dataset_id": dataset["id"],
+                "dataset_index": dataset_index,
                 "type": "Seq",
                 "url": os.path.join(relative_dir, filename),  # where to find the sql db
             }
@@ -109,7 +114,8 @@ with open(os.path.join(dir, "samples.sql"), "w") as f:
     for [dataset_name, dataset] in datasets.items():
 
         print(
-            f"""INSERT INTO datasets (id, genome, assembly, platform, name) VALUES (
+            f"""INSERT INTO datasets (id, uuid, genome, assembly, platform, name) VALUES (
+                {dataset["index"]},
                 '{dataset["id"]}',
                 '{dataset["genome"]}',
                 '{dataset["assembly"]}',
@@ -119,7 +125,7 @@ with open(os.path.join(dir, "samples.sql"), "w") as f:
         )
 
         print(
-            f"INSERT INTO dataset_permissions (dataset_id, permission_id) VALUES ('{dataset["id"]}', '019bebfc-30dc-7569-8727-02c741227ad8');",
+            f"INSERT INTO dataset_permissions (dataset_id, permission_id) VALUES ({dataset["index"]}, 1);",
             file=f,
         )
 
@@ -129,9 +135,9 @@ with open(os.path.join(dir, "samples.sql"), "w") as f:
     for row in data:
 
         print(
-            f"""INSERT INTO samples (id, dataset_id, name, reads, type, url) VALUES (
+            f"""INSERT INTO samples (uuid, dataset_id, name, reads, type, url) VALUES (
                 '{row["id"]}',
-                '{row["dataset_id"]}',
+                {row["dataset_index"]},
                 '{row["name"]}',
                 {row["reads"]},
                 '{row["type"]}',
