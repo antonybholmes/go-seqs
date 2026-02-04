@@ -11,10 +11,9 @@ CREATE TABLE sample (
 
 CREATE TABLE bins (
 	id INTEGER PRIMARY KEY,
-	size INTEGER NOT NULL,
+	size INTEGER NOT NULL UNIQUE,
 	reads INTEGER NOT NULL,
-	bpm_scale_factor REAL NOT NULL,
-	UNIQUE(size, reads, bpm_scale_factor));
+	bpm_scale_factor REAL NOT NULL);
 
 CREATE TABLE chromosomes (
     id INTEGER PRIMARY KEY,
