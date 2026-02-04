@@ -73,7 +73,7 @@ type (
 
 const (
 	PlatformsSql = `SELECT DISTINCT
-		d.id,
+		d.uuid,
 		d.genome,
 		d.assembly, 
 		d.platform
@@ -88,7 +88,7 @@ const (
 			d.platform`
 
 	DatasetsSql = `SELECT DISTINCT
-		d.id,
+		d.uuid,
 		d.genome,
 		d.assembly, 
 		d.platform, 	
@@ -146,11 +146,11 @@ const (
 		JOIN datasets d ON s.dataset_id = d.id`
 
 	DatasetSamplesSql = SelectSampleSql +
-		` WHERE d.id = :id
+		` WHERE d.uuid = :id
 		ORDER BY s.name`
 
 	SampleFromIdSql = SelectSampleSql +
-		` WHERE s.id = :id`
+		` WHERE s.uuid = :id`
 
 	BaseSearchSamplesSql = SelectSampleSql +
 		` JOIN dataset_permissions dp ON d.id = dp.dataset_id
@@ -238,11 +238,9 @@ func (sdb *SeqDB) Close() error {
 // }
 
 func (sdb *SeqDB) CanViewSample(sampleId string, isAdmin bool, permissions []string) error {
-	namedArgs := []any{sql.Named("id", sampleId), sql.Named("is_admin", isAdmin)}
+	namedArgs := []any{sql.Named("id", sampleId)}
 
-	inClause := sqlite.MakePermissionsInClause(permissions, &namedArgs)
-
-	query := strings.Replace(CanViewSampleSql, "<<PERMISSIONS>>", inClause, 1)
+	query := sqlite.MakePermissionsSql(CanViewSampleSql, permissions, isAdmin, &namedArgs)
 
 	var id string
 	err := sdb.db.QueryRow(query, namedArgs...).Scan(&id)
@@ -261,11 +259,9 @@ func (sdb *SeqDB) CanViewSample(sampleId string, isAdmin bool, permissions []str
 }
 
 func (sdb *SeqDB) Platforms(assembly string, isAdmin bool, permissions []string) ([]*Platform, error) {
-	namedArgs := []any{sql.Named("assembly", assembly), sql.Named("is_admin", isAdmin)}
+	namedArgs := []any{sql.Named("assembly", assembly)}
 
-	inClause := sqlite.MakePermissionsInClause(permissions, &namedArgs)
-
-	query := strings.Replace(PlatformsSql, "<<PERMISSIONS>>", inClause, 1)
+	query := sqlite.MakePermissionsSql(PlatformsSql, permissions, isAdmin, &namedArgs)
 
 	rows, err := sdb.db.Query(query, namedArgs...)
 
@@ -296,11 +292,9 @@ func (sdb *SeqDB) Platforms(assembly string, isAdmin bool, permissions []string)
 
 func (sdb *SeqDB) Datasets(assembly string, isAdmin bool, permissions []string) ([]*Dataset, error) {
 	// build sql.Named args
-	namedArgs := []any{sql.Named("assembly", assembly), sql.Named("is_admin", isAdmin)}
+	namedArgs := []any{sql.Named("assembly", assembly)}
 
-	inClause := sqlite.MakePermissionsInClause(permissions, &namedArgs)
-
-	query := strings.Replace(DatasetsSql, "<<PERMISSIONS>>", inClause, 1)
+	query := sqlite.MakePermissionsSql(DatasetsSql, permissions, isAdmin, &namedArgs)
 
 	// execute query
 
@@ -336,12 +330,9 @@ func (sdb *SeqDB) PlatformDatasets(platform string, assembly string, isAdmin boo
 	// build sql.Named args
 
 	namedArgs := []any{sql.Named("assembly", assembly),
-		sql.Named("platform", platform),
-		sql.Named("is_admin", isAdmin)}
+		sql.Named("platform", platform)}
 
-	inClause := sqlite.MakePermissionsInClause(permissions, &namedArgs)
-
-	query := strings.Replace(DatasetsSql, "<<PERMISSIONS>>", inClause, 1)
+	query := sqlite.MakePermissionsSql(PlatformDatasetsSql, permissions, isAdmin, &namedArgs)
 
 	// execute query
 
@@ -405,13 +396,12 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 
 	if query != "" {
 
-		namedParams := []any{sql.Named("assembly", assembly),
+		namedArgs := []any{sql.Named("assembly", assembly),
 			sql.Named("id", query),
 			sql.Named("q", fmt.Sprintf("%%%s%%", query)),
-			sql.Named("is_admin", isAdmin),
 		}
 
-		inClause := sqlite.MakePermissionsInClause(permissions, &namedParams)
+		query := sqlite.MakePermissionsSql(SearchSamplesSql, permissions, isAdmin, &namedArgs)
 
 		// if platform != "" {
 		// 	// platform specific search
@@ -423,18 +413,16 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 
 		// } else {
 		//search all platforms within assembly
-		rows, err = sdb.db.Query(strings.Replace(SearchSamplesSql, "<<PERMISSIONS>>", inClause, 1),
-			namedParams...)
+		rows, err = sdb.db.Query(query, namedArgs...)
 		//}
 	} else {
-		namedParams := []any{sql.Named("assembly", assembly), sql.Named("is_admin", isAdmin)}
+		namedArgs := []any{sql.Named("assembly", assembly)}
 
-		inClause := sqlite.MakePermissionsInClause(permissions, &namedParams)
+		query := sqlite.MakePermissionsSql(AllSamplesSql, permissions, isAdmin, &namedArgs)
 
 		//log.Debug().Msgf("search all samples sql %s", strings.Replace(AllSamplesSql, "<<PERMISSIONS>>", inClause, 1))
 
-		rows, err = sdb.db.Query(strings.Replace(AllSamplesSql, "<<PERMISSIONS>>", inClause, 1),
-			namedParams...)
+		rows, err = sdb.db.Query(query, namedArgs...)
 	}
 
 	if err != nil {
@@ -589,7 +577,6 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*SampleBinCounts, er
 	db, err := sql.Open(sys.Sqlite3DB, path)
 
 	if err != nil {
-		log.Debug().Msgf("error opening %s %s", path, err)
 		return &ret, err
 	}
 

@@ -170,10 +170,13 @@ func BinsRoute(c *gin.Context) {
 					params.Scale)
 
 				if err != nil {
+					log.Debug().Msgf("getting bins for %s %v", sample, err)
 
 					c.Error(err)
 					return
 				}
+
+				log.Debug().Msgf("getting bins for %s %s", sample, location.String())
 
 				// guarantees something is returned even with error
 				// so we can ignore the errors for now to make the api
