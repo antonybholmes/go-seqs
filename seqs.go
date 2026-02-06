@@ -81,7 +81,7 @@ const (
 		JOIN dataset_permissions dp ON d.id = dp.dataset_id
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
-			(:is_admin = 1 OR p.name IN (<<PERMISSIONS>>))
+			<<PERMISSIONS>>
 		ORDER BY
 			d.genome,
 			d.assembly,
@@ -97,7 +97,7 @@ const (
 		JOIN dataset_permissions dp ON d.id = dp.dataset_id
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
-			(:is_admin = 1 OR p.name IN (<<PERMISSIONS>>))
+			<<PERMISSIONS>>
 			AND d.assembly = :assembly
 		ORDER BY 
 			d.genome,
@@ -112,7 +112,7 @@ const (
 		JOIN dataset_permissions dp ON d.id = dp.dataset_id
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
-			(:is_admin = 1 OR p.name IN (<<PERMISSIONS>>))
+			<<PERMISSIONS>>
 			AND d.platform = :platform
 			AND d.assembly = :assembly
 		ORDER BY 
@@ -128,8 +128,8 @@ const (
 		JOIN dataset_permissions dp ON d.id = dp.dataset_id
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE
-			s.uuid = :id AND
-			(:is_admin = 1 OR p.name IN (<<PERMISSIONS>>))`
+			<<PERMISSIONS>>
+			AND s.uuid = :id`
 
 	SelectSampleSql = `SELECT
 		s.uuid,
@@ -156,7 +156,7 @@ const (
 		` JOIN dataset_permissions dp ON d.id = dp.dataset_id
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
-			(:is_admin = 1 OR p.name IN (<<PERMISSIONS>>))
+			<<PERMISSIONS>>
 			AND d.assembly = :assembly`
 
 	AllSamplesSql = BaseSearchSamplesSql +
@@ -419,8 +419,6 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 		namedArgs := []any{sql.Named("assembly", assembly)}
 
 		query := sqlite.MakePermissionsSql(AllSamplesSql, permissions, isAdmin, &namedArgs)
-
-		//log.Debug().Msgf("search all samples sql %s", strings.Replace(AllSamplesSql, "<<PERMISSIONS>>", inClause, 1))
 
 		rows, err = sdb.db.Query(query, namedArgs...)
 	}
