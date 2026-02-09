@@ -3,7 +3,7 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE datasets (
 	id INTEGER PRIMARY KEY,
-	uuid TEXT NOT NULL UNIQUE,
+	public_id TEXT NOT NULL UNIQUE,
 	genome TEXT NOT NULL,
 	assembly TEXT NOT NULL,
 	platform TEXT NOT NULL,
@@ -16,7 +16,7 @@ CREATE INDEX dataset_tags_idx ON datasets(tags);
 
 CREATE TABLE permissions (
 	id INTEGER PRIMARY KEY,
-	uuid TEXT NOT NULL UNIQUE,
+	public_id TEXT NOT NULL UNIQUE,
 	name TEXT NOT NULL);
 CREATE INDEX permissions_name_idx ON permissions(name);
 
@@ -29,7 +29,7 @@ CREATE TABLE dataset_permissions (
 
 CREATE TABLE samples (
 	id INTEGER PRIMARY KEY,
-	uuid TEXT NOT NULL UNIQUE,
+	public_id TEXT NOT NULL UNIQUE,
 	dataset_id INTEGER NOT NULL,
 	name TEXT NOT NULL,
 	reads INTEGER NOT NULL,
@@ -43,5 +43,5 @@ CREATE INDEX samples_name_idx ON samples(name);
 CREATE INDEX samples_tags_idx ON samples(tags);
 
 
-INSERT INTO permissions (id, uuid, name) VALUES (1, '019bebfc-30dc-7569-8727-02c741227ad8', 'rdf:view');
+INSERT INTO permissions (id, public_id, name) VALUES (1, '019bebfc-30dc-7569-8727-02c741227ad8', 'rdf:view');
 

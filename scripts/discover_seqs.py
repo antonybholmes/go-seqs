@@ -114,7 +114,7 @@ with open(os.path.join(dir, "samples.sql"), "w") as f:
     for [dataset_name, dataset] in datasets.items():
 
         print(
-            f"""INSERT INTO datasets (id, uuid, genome, assembly, platform, name) VALUES (
+            f"""INSERT INTO datasets (id, public_id, genome, assembly, platform, name) VALUES (
                 {dataset["index"]},
                 '{dataset["id"]}',
                 '{dataset["genome"]}',
@@ -135,7 +135,7 @@ with open(os.path.join(dir, "samples.sql"), "w") as f:
     for row in data:
 
         print(
-            f"""INSERT INTO samples (uuid, dataset_id, name, reads, type, url) VALUES (
+            f"""INSERT INTO samples (public_id, dataset_id, name, reads, type, url) VALUES (
                 '{row["id"]}',
                 {row["dataset_index"]},
                 '{row["name"]}',

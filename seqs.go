@@ -73,7 +73,7 @@ type (
 
 const (
 	PlatformsSql = `SELECT DISTINCT
-		d.uuid,
+		d.public_id,
 		d.genome,
 		d.assembly, 
 		d.platform
@@ -88,7 +88,7 @@ const (
 			d.platform`
 
 	DatasetsSql = `SELECT DISTINCT
-		d.uuid,
+		d.public_id,
 		d.genome,
 		d.assembly, 
 		d.platform, 	
@@ -104,7 +104,7 @@ const (
 			d.assembly`
 
 	PlatformDatasetsSql = `SELECT DISTINCT
-		d.uuid,
+		d.public_id,
 		d.assembly, 
 		d.platform, 	
 		d.name
@@ -122,17 +122,17 @@ const (
 	//const TRACK_SQL = `SELECT name, reads FROM track`
 
 	CanViewSampleSql = `SELECT
-		s.uuid
+		s.public_id
 		FROM samples s
 		JOIN datasets d ON s.dataset_id = d.id
 		JOIN dataset_permissions dp ON d.id = dp.dataset_id
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE
 			<<PERMISSIONS>>
-			AND s.uuid = :id`
+			AND s.public_id = :id`
 
 	SelectSampleSql = `SELECT
-		s.uuid,
+		s.public_id,
 		d.genome,
 		d.assembly,
 		d.platform, 	
@@ -146,11 +146,11 @@ const (
 		JOIN datasets d ON s.dataset_id = d.id`
 
 	DatasetSamplesSql = SelectSampleSql +
-		` WHERE d.uuid = :id
+		` WHERE d.public_id = :id
 		ORDER BY s.name`
 
 	SampleFromIdSql = SelectSampleSql +
-		` WHERE s.uuid = :id`
+		` WHERE s.public_id = :id`
 
 	BaseSearchSamplesSql = SelectSampleSql +
 		` JOIN dataset_permissions dp ON d.id = dp.dataset_id
@@ -166,7 +166,7 @@ const (
 			s.name`
 
 	SearchSamplesSql = BaseSearchSamplesSql +
-		` AND (s.id = :id OR d.id = :id OR d.platform = :id OR d.name LIKE :q OR s.name LIKE :q)
+		` AND (s.public_id = :id OR d.public_id = :id OR d.platform = :id OR d.name LIKE :q OR s.name LIKE :q)
 		ORDER BY 
 			d.platform, 
 			d.name, 
@@ -199,8 +199,8 @@ func (sdb *SeqDB) Dir() string {
 }
 
 func NewSeqDB(url string) *SeqDB {
-	log.Debug().Msgf("Load db: %s", filepath.Join(url, "samples.db?mode=ro"))
-	db := sys.Must(sql.Open(sys.Sqlite3DB, filepath.Join(url, "samples.db?mode=ro")))
+	log.Debug().Msgf("Load db: %s", filepath.Join(url, "samples.db"+sys.SqliteReadOnlySuffix))
+	db := sys.Must(sql.Open(sys.Sqlite3DB, filepath.Join(url, "samples.db"+sys.SqliteReadOnlySuffix)))
 
 	//x := sys.Must(db.Prepare(ALL_TRACKS_SQL))
 

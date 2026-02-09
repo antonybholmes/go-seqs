@@ -42,13 +42,13 @@ with open(out, "w") as fout:
     print("BEGIN TRANSACTION;", file=fout)
 
     print(
-        f"""INSERT INTO datasets (uuid, genome, assembly, platform, name) VALUES ('{dataset_id}', '{genome}', '{assembly}', '{platform}', '{dataset}');""",
+        f"""INSERT INTO datasets (public_id, genome, assembly, platform, name) VALUES ('{dataset_id}', '{genome}', '{assembly}', '{platform}', '{dataset}');""",
         file=fout,
     )
 
     print(
         f"""INSERT INTO dataset_permissions (dataset_id, permission_id) 
-        SELECT id, 1 FROM datasets WHERE uuid='{dataset_id}';""",
+        SELECT id, 1 FROM datasets WHERE public_id='{dataset_id}';""",
         file=fout,
     )
 
@@ -67,9 +67,9 @@ with open(out, "w") as fout:
                 url = tokens[1]
                 id = uuid.uuid7()
                 print(
-                    f"""INSERT INTO samples (uuid, dataset_id, name, reads, type, url, tags) 
+                    f"""INSERT INTO samples (public_id, dataset_id, name, reads, type, url, tags) 
                     SELECT '{id}', id, '{name}', -1, 'Remote BigWig', '{url}', 'scale={scale}'
-                    FROM datasets WHERE uuid='{dataset_id}';""",
+                    FROM datasets WHERE public_id='{dataset_id}';""",
                     file=fout,
                 )
     print("COMMIT;", file=fout)
