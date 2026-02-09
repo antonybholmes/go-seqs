@@ -240,7 +240,7 @@ func (sdb *SeqDB) Close() error {
 func (sdb *SeqDB) CanViewSample(sampleId string, isAdmin bool, permissions []string) error {
 	namedArgs := []any{sql.Named("id", sampleId)}
 
-	query := sqlite.MakePermissionsSql(CanViewSampleSql, permissions, isAdmin, &namedArgs)
+	query := sqlite.MakePermissionsSql(CanViewSampleSql, isAdmin, permissions, &namedArgs)
 
 	var id string
 	err := sdb.db.QueryRow(query, namedArgs...).Scan(&id)
@@ -261,7 +261,7 @@ func (sdb *SeqDB) CanViewSample(sampleId string, isAdmin bool, permissions []str
 func (sdb *SeqDB) Platforms(assembly string, isAdmin bool, permissions []string) ([]*Platform, error) {
 	namedArgs := []any{sql.Named("assembly", assembly)}
 
-	query := sqlite.MakePermissionsSql(PlatformsSql, permissions, isAdmin, &namedArgs)
+	query := sqlite.MakePermissionsSql(PlatformsSql, isAdmin, permissions, &namedArgs)
 
 	rows, err := sdb.db.Query(query, namedArgs...)
 
@@ -294,7 +294,7 @@ func (sdb *SeqDB) Datasets(assembly string, isAdmin bool, permissions []string) 
 	// build sql.Named args
 	namedArgs := []any{sql.Named("assembly", assembly)}
 
-	query := sqlite.MakePermissionsSql(DatasetsSql, permissions, isAdmin, &namedArgs)
+	query := sqlite.MakePermissionsSql(DatasetsSql, isAdmin, permissions, &namedArgs)
 
 	// execute query
 
@@ -332,7 +332,7 @@ func (sdb *SeqDB) PlatformDatasets(platform string, assembly string, isAdmin boo
 	namedArgs := []any{sql.Named("assembly", assembly),
 		sql.Named("platform", platform)}
 
-	query := sqlite.MakePermissionsSql(PlatformDatasetsSql, permissions, isAdmin, &namedArgs)
+	query := sqlite.MakePermissionsSql(PlatformDatasetsSql, isAdmin, permissions, &namedArgs)
 
 	// execute query
 
@@ -401,7 +401,7 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 			sql.Named("q", fmt.Sprintf("%%%s%%", query)),
 		}
 
-		query := sqlite.MakePermissionsSql(SearchSamplesSql, permissions, isAdmin, &namedArgs)
+		query := sqlite.MakePermissionsSql(SearchSamplesSql, isAdmin, permissions, &namedArgs)
 
 		// if platform != "" {
 		// 	// platform specific search
@@ -418,7 +418,7 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 	} else {
 		namedArgs := []any{sql.Named("assembly", assembly)}
 
-		query := sqlite.MakePermissionsSql(AllSamplesSql, permissions, isAdmin, &namedArgs)
+		query := sqlite.MakePermissionsSql(AllSamplesSql, isAdmin, permissions, &namedArgs)
 
 		rows, err = sdb.db.Query(query, namedArgs...)
 	}
