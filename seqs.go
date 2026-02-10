@@ -11,6 +11,7 @@ import (
 	"github.com/antonybholmes/go-dna"
 	"github.com/antonybholmes/go-sys"
 	"github.com/antonybholmes/go-sys/log"
+	"github.com/antonybholmes/go-web"
 	"github.com/antonybholmes/go-web/auth/sqlite"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -82,6 +83,7 @@ const (
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
 			<<PERMISSIONS>>
+			AND LOWER(d.assembly) = :assembly
 		ORDER BY
 			d.genome,
 			d.assembly,
@@ -98,7 +100,7 @@ const (
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
 			<<PERMISSIONS>>
-			AND d.assembly = :assembly
+			AND LOWER(d.assembly) = :assembly
 		ORDER BY 
 			d.genome,
 			d.assembly`
@@ -114,7 +116,7 @@ const (
 		WHERE 
 			<<PERMISSIONS>>
 			AND d.platform = :platform
-			AND d.assembly = :assembly
+			AND LOWER(d.assembly) = :assembly
 		ORDER BY 
 			d.genome,
 			d.assembly`
@@ -157,7 +159,7 @@ const (
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
 			<<PERMISSIONS>>
-			AND d.assembly = :assembly`
+			AND LOWER(d.assembly) = :assembly`
 
 	AllSamplesSql = BaseSearchSamplesSql +
 		` ORDER BY 
@@ -259,7 +261,7 @@ func (sdb *SeqDB) CanViewSample(sampleId string, isAdmin bool, permissions []str
 }
 
 func (sdb *SeqDB) Platforms(assembly string, isAdmin bool, permissions []string) ([]*Platform, error) {
-	namedArgs := []any{sql.Named("assembly", assembly)}
+	namedArgs := []any{sql.Named("assembly", web.FormatParam(assembly))}
 
 	query := sqlite.MakePermissionsSql(PlatformsSql, isAdmin, permissions, &namedArgs)
 
@@ -292,7 +294,7 @@ func (sdb *SeqDB) Platforms(assembly string, isAdmin bool, permissions []string)
 
 func (sdb *SeqDB) Datasets(assembly string, isAdmin bool, permissions []string) ([]*Dataset, error) {
 	// build sql.Named args
-	namedArgs := []any{sql.Named("assembly", assembly)}
+	namedArgs := []any{sql.Named("assembly", web.FormatParam(assembly))}
 
 	query := sqlite.MakePermissionsSql(DatasetsSql, isAdmin, permissions, &namedArgs)
 
@@ -329,7 +331,7 @@ func (sdb *SeqDB) Datasets(assembly string, isAdmin bool, permissions []string) 
 func (sdb *SeqDB) PlatformDatasets(platform string, assembly string, isAdmin bool, permissions []string) ([]*Dataset, error) {
 	// build sql.Named args
 
-	namedArgs := []any{sql.Named("assembly", assembly),
+	namedArgs := []any{sql.Named("assembly", web.FormatParam(assembly)),
 		sql.Named("platform", platform)}
 
 	query := sqlite.MakePermissionsSql(PlatformDatasetsSql, isAdmin, permissions, &namedArgs)
@@ -395,8 +397,9 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 	var err error
 
 	if query != "" {
+		query = strings.TrimSpace(query)
 
-		namedArgs := []any{sql.Named("assembly", assembly),
+		namedArgs := []any{sql.Named("assembly", web.FormatParam(assembly)),
 			sql.Named("id", query),
 			sql.Named("q", fmt.Sprintf("%%%s%%", query)),
 		}
@@ -416,7 +419,7 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 		rows, err = sdb.db.Query(query, namedArgs...)
 		//}
 	} else {
-		namedArgs := []any{sql.Named("assembly", assembly)}
+		namedArgs := []any{sql.Named("assembly", web.FormatParam(assembly))}
 
 		query := sqlite.MakePermissionsSql(AllSamplesSql, isAdmin, permissions, &namedArgs)
 

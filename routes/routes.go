@@ -89,7 +89,7 @@ func ParseSeqParamsFromPost(c *gin.Context) (*SeqParams, error) {
 func PlatformsRoute(c *gin.Context) {
 	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
 
-		assembly := c.Param("assembly")
+		assembly := c.Query("assembly")
 
 		platforms, err := seqdb.Platforms(assembly, isAdmin, user.Permissions)
 		if err != nil {
@@ -120,14 +120,14 @@ func PlatformDatasetsRoute(c *gin.Context) {
 
 func SearchSeqRoute(c *gin.Context) {
 	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
-		assembly := c.Param("assembly")
+		assembly := c.Query("assembly")
 
 		if assembly == "" {
 			web.BadReqResp(c, ErrNoGenomeSupplied)
 			return
 		}
 
-		query := c.Query("search")
+		query := c.Query("q")
 
 		tracks, err := seqdb.SearchSamples(query, assembly, isAdmin, user.Permissions)
 
