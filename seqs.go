@@ -26,10 +26,12 @@ type (
 	SampleBinCounts struct {
 		Id string `json:"id"`
 		//Name    string     `json:"name"`
-		Bins           []*ReadBin `json:"bins"`
-		YMax           int        `json:"ymax"`
-		BinSize        int        `json:"binSize"`
-		BpmScaleFactor float64    `json:"bpmScaleFactor"`
+		Bins    []*ReadBin `json:"bins"`
+		YMax    int        `json:"ymax"`
+		BinSize int        `json:"binSize"`
+		//BpmScaleFactor float64    `json:"bpmScaleFactor"`
+		Reads    int `json:"reads"`
+		BinReads int `json:"binReads"`
 	}
 
 	Platform struct {
@@ -48,16 +50,16 @@ type (
 	}
 
 	Sample struct {
-		Id       string   `json:"id"`
-		Genome   string   `json:"genome"`
-		Assembly string   `json:"assembly"`
-		Platform string   `json:"platform"`
-		Dataset  string   `json:"dataset"`
-		Name     string   `json:"name"`
-		Type     string   `json:"type"`
-		Url      string   `json:"url"`
-		Tags     []string `json:"tags"`
-		Reads    int      `json:"reads"`
+		Id         string   `json:"id"`
+		Genome     string   `json:"genome"`
+		Assembly   string   `json:"assembly"`
+		Technology string   `json:"technology"`
+		Dataset    string   `json:"dataset"`
+		Name       string   `json:"name"`
+		Type       string   `json:"type"`
+		Url        string   `json:"url"`
+		Tags       []string `json:"tags"`
+		Reads      int      `json:"reads"`
 	}
 
 	SeqDB struct {
@@ -73,57 +75,65 @@ type (
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
 const (
-	PlatformsSql = `SELECT DISTINCT
+	TechnologiesSql = `SELECT DISTINCT
 		d.public_id,
-		d.genome,
-		d.assembly, 
-		d.platform
+		g.name as genome,
+		a.name as assembly, 
+		t.name as technology
 		FROM datasets d
+		JOIN assemblies a ON d.assembly_id = a.id
+		JOIN genomes g ON a.genome_id = g.id
+		JOIN technologies t ON d.technology_id = t.id
 		JOIN dataset_permissions dp ON d.id = dp.dataset_id
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
 			<<PERMISSIONS>>
-			AND LOWER(d.assembly) = :assembly
+			AND LOWER(a.name) = :assembly
 		ORDER BY
-			d.genome,
-			d.assembly,
-			d.platform`
+			g.name,
+			a.name,
+			t.name`
 
 	DatasetsSql = `SELECT DISTINCT
 		d.public_id,
-		d.genome,
-		d.assembly, 
-		d.platform, 	
+		g.name as genome,
+		a.name as assembly, 
+		t.name as technology,
 		d.name
 		FROM datasets d
+		JOIN assemblies a ON d.assembly_id = a.id
+		JOIN genomes g ON a.genome_id = g.id
+		JOIN technologies t ON d.technology_id = t.id
 		JOIN dataset_permissions dp ON d.id = dp.dataset_id
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
 			<<PERMISSIONS>>
-			AND LOWER(d.assembly) = :assembly
-		ORDER BY 
-			d.genome,
-			d.assembly`
+			AND LOWER(a.name) = :assembly
+		ORDER BY
+			g.name, 
+			a.name`
 
-	PlatformDatasetsSql = `SELECT DISTINCT
+	TechnologyDatasetsSql = `SELECT DISTINCT
 		d.public_id,
-		d.assembly, 
-		d.platform, 	
+		a.name as assembly, 
+		t.name as technology, 	
 		d.name
 		FROM datasets d
+		JOIN assemblies a ON d.assembly_id = a.id
+		JOIN technologies t ON d.technology_id = t.id
 		JOIN dataset_permissions dp ON d.id = dp.dataset_id
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
 			<<PERMISSIONS>>
-			AND d.platform = :platform
-			AND LOWER(d.assembly) = :assembly
-		ORDER BY 
-			d.genome,
-			d.assembly`
+			AND t.name = :technology
+			AND LOWER(a.name) = :assembly
+		ORDER BY
+			a.name,
+			d.name`
 
 	//const TRACK_SQL = `SELECT name, reads FROM track`
 
-	CanViewSampleSql = `SELECT
+	CanViewSampleSql = `SELECT DISTINCT
 		s.public_id
 		FROM samples s
 		JOIN datasets d ON s.dataset_id = d.id
@@ -133,19 +143,23 @@ const (
 			<<PERMISSIONS>>
 			AND s.public_id = :id`
 
-	SelectSampleSql = `SELECT
+	SelectSampleSql = `SELECT DISTINCT
 		s.public_id,
-		d.genome,
-		d.assembly,
-		d.platform, 	
-		d.name as dataset_name,
-		s.name as sample_name,  
-		s.reads, 
-		s.type, 
+		g.name AS genome,
+		a.name AS assembly,
+		t.name AS technology, 	
+		d.name AS dataset_name,
+		s.name AS sample_name,
+		st.name AS sample_type, 
+		s.reads,
 		s.url, 
 		s.tags
 		FROM samples s
-		JOIN datasets d ON s.dataset_id = d.id`
+		JOIN datasets d ON s.dataset_id = d.id
+		JOIN assemblies a ON d.assembly_id = a.id
+		JOIN genomes g ON a.genome_id = g.id
+		JOIN technologies t ON d.technology_id = t.id
+		JOIN sample_types st ON s.type_id = st.id`
 
 	DatasetSamplesSql = SelectSampleSql +
 		` WHERE d.public_id = :id
@@ -159,38 +173,39 @@ const (
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
 			<<PERMISSIONS>>
-			AND LOWER(d.assembly) = :assembly`
+			AND LOWER(a.name) = :assembly`
 
 	AllSamplesSql = BaseSearchSamplesSql +
 		` ORDER BY 
-			d.platform, 
+			t.name, 
 			d.name, 
 			s.name`
 
 	SearchSamplesSql = BaseSearchSamplesSql +
-		` AND (s.public_id = :id OR d.public_id = :id OR d.platform = :id OR d.name LIKE :q OR s.name LIKE :q)
+		` AND (s.public_id = :id OR d.public_id = :id OR a.name = :id OR d.name LIKE :q OR s.name LIKE :q)
 		ORDER BY 
-			d.platform, 
+			t.name, 
 			d.name, 
 			s.name`
 
-	SearchPlatformSamplesSql = BaseSearchSamplesSql +
-		` AND d.platform = :platform
-		AND (s.id = :id OR d.id = :id OR d.name LIKE :q OR s.name LIKE :q)
-		ORDER BY
-			d.name, 
-			s.name`
+	// SearchPlatformSamplesSql = BaseSearchSamplesSql +
+	// 	` AND d.platform = :platform
+	// 	AND (s.id = :id OR d.id = :id OR d.name LIKE :q OR s.name LIKE :q)
+	// 	ORDER BY
+	// 		d.name,
+	// 		s.name`
 
-	BpmSql = `SELECT bpm_scale_factor FROM bins WHERE size = :bin_size`
+	BpmSql = `SELECT reads, bpm_scale_factor FROM bins WHERE size = :bin_size`
 
 	ReadsSql = `SELECT 
 		r.start, 
 		r.end, 
 		r.count 
 		FROM reads r
+		JOIN bins b ON r.bin_id = b.id
 		JOIN chromosomes c ON r.chr_id = c.id
  		WHERE c.name = :chr 
-			AND r.bin = :bin 
+			AND b.size = :bin 
 			AND r.start <= :end 
 			AND r.end >= :start
 		ORDER BY r.start`
@@ -201,8 +216,7 @@ func (sdb *SeqDB) Dir() string {
 }
 
 func NewSeqDB(url string) *SeqDB {
-	log.Debug().Msgf("Load db: %s", filepath.Join(url, "samples.db"+sys.SqliteReadOnlySuffix))
-	db := sys.Must(sql.Open(sys.Sqlite3DB, filepath.Join(url, "samples.db"+sys.SqliteReadOnlySuffix)))
+	db := sys.Must(sql.Open(sys.Sqlite3DB, filepath.Join(url, "seqs.db"+sys.SqliteReadOnlySuffix)))
 
 	//x := sys.Must(db.Prepare(ALL_TRACKS_SQL))
 
@@ -260,37 +274,37 @@ func (sdb *SeqDB) CanViewSample(sampleId string, isAdmin bool, permissions []str
 	return nil
 }
 
-func (sdb *SeqDB) Platforms(assembly string, isAdmin bool, permissions []string) ([]*Platform, error) {
-	namedArgs := []any{sql.Named("assembly", web.FormatParam(assembly))}
+// func (sdb *SeqDB) Platforms(assembly string, isAdmin bool, permissions []string) ([]*Platform, error) {
+// 	namedArgs := []any{sql.Named("assembly", web.FormatParam(assembly))}
 
-	query := sqlite.MakePermissionsSql(PlatformsSql, isAdmin, permissions, &namedArgs)
+// 	query := sqlite.MakePermissionsSql(TechnologiesSql, isAdmin, permissions, &namedArgs)
 
-	rows, err := sdb.db.Query(query, namedArgs...)
+// 	rows, err := sdb.db.Query(query, namedArgs...)
 
-	if err != nil {
-		return nil, err //fmt.Errorf("there was an error with the database query")
-	}
+// 	if err != nil {
+// 		return nil, err //fmt.Errorf("there was an error with the database query")
+// 	}
 
-	defer rows.Close()
+// 	defer rows.Close()
 
-	ret := make([]*Platform, 0, 10)
+// 	ret := make([]*Platform, 0, 10)
 
-	for rows.Next() {
-		var platform Platform
+// 	for rows.Next() {
+// 		var platform Platform
 
-		err := rows.Scan(&platform.Genome,
-			&platform.Assembly,
-			&platform.Platform)
+// 		err := rows.Scan(&platform.Genome,
+// 			&platform.Assembly,
+// 			&platform.Platform)
 
-		if err != nil {
-			return nil, err //fmt.Errorf("there was an error with the database records")
-		}
+// 		if err != nil {
+// 			return nil, err //fmt.Errorf("there was an error with the database records")
+// 		}
 
-		ret = append(ret, &platform)
-	}
+// 		ret = append(ret, &platform)
+// 	}
 
-	return ret, nil
-}
+// 	return ret, nil
+// }
 
 func (sdb *SeqDB) Datasets(assembly string, isAdmin bool, permissions []string) ([]*Dataset, error) {
 	// build sql.Named args
@@ -328,44 +342,44 @@ func (sdb *SeqDB) Datasets(assembly string, isAdmin bool, permissions []string) 
 	return ret, nil
 }
 
-func (sdb *SeqDB) PlatformDatasets(platform string, assembly string, isAdmin bool, permissions []string) ([]*Dataset, error) {
-	// build sql.Named args
+// func (sdb *SeqDB) PlatformDatasets(platform string, assembly string, isAdmin bool, permissions []string) ([]*Dataset, error) {
+// 	// build sql.Named args
 
-	namedArgs := []any{sql.Named("assembly", web.FormatParam(assembly)),
-		sql.Named("platform", platform)}
+// 	namedArgs := []any{sql.Named("assembly", web.FormatParam(assembly)),
+// 		sql.Named("platform", platform)}
 
-	query := sqlite.MakePermissionsSql(PlatformDatasetsSql, isAdmin, permissions, &namedArgs)
+// 	query := sqlite.MakePermissionsSql(TechnologyDatasetsSql, isAdmin, permissions, &namedArgs)
 
-	// execute query
+// 	// execute query
 
-	rows, err := sdb.db.Query(query, namedArgs...)
+// 	rows, err := sdb.db.Query(query, namedArgs...)
 
-	if err != nil {
-		return nil, err //fmt.Errorf("there was an error with the database query")
-	}
+// 	if err != nil {
+// 		return nil, err //fmt.Errorf("there was an error with the database query")
+// 	}
 
-	defer rows.Close()
+// 	defer rows.Close()
 
-	ret := make([]*Dataset, 0, 10)
+// 	ret := make([]*Dataset, 0, 10)
 
-	for rows.Next() {
-		var dataset Dataset
+// 	for rows.Next() {
+// 		var dataset Dataset
 
-		err := rows.Scan(&dataset.Id,
-			&dataset.Genome,
-			&dataset.Assembly,
-			&dataset.Platform,
-			&dataset.Name)
+// 		err := rows.Scan(&dataset.Id,
+// 			&dataset.Genome,
+// 			&dataset.Assembly,
+// 			&dataset.Platform,
+// 			&dataset.Name)
 
-		if err != nil {
-			return nil, err //fmt.Errorf("there was an error with the database records")
-		}
+// 		if err != nil {
+// 			return nil, err //fmt.Errorf("there was an error with the database records")
+// 		}
 
-		ret = append(ret, &dataset)
-	}
+// 		ret = append(ret, &dataset)
+// 	}
 
-	return ret, nil
-}
+// 	return ret, nil
+// }
 
 func (sdb *SeqDB) Samples(datasetId string) ([]*Sample, error) {
 	rows, err := sdb.db.Query(DatasetSamplesSql, sql.Named("id", datasetId))
@@ -432,18 +446,6 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 
 	defer rows.Close()
 
-	//datasets := make([]*Dataset, 0, 10)
-
-	//id, uuid, genome, platform, name, reads, stat_mode, url
-
-	//var datasetId string
-	//var genome string
-	//var platform string
-	//var name string
-	//var tags string
-
-	//var dataset *Dataset
-
 	ret := make([]*Sample, 0, 10)
 
 	for rows.Next() {
@@ -475,7 +477,7 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 	return ret, nil
 }
 
-func (sdb *SeqDB) ReaderFromId(sampleId string, binWidth int, scale float64) (*SeqReader, error) {
+func (sdb *SeqDB) SampleReader(sampleId string, binWidth int) (*SeqReader, error) {
 
 	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, url FROM tracks WHERE seq.publicId = ?1`
 
@@ -489,57 +491,24 @@ func (sdb *SeqDB) ReaderFromId(sampleId string, binWidth int, scale float64) (*S
 
 	url := filepath.Join(sdb.url, sample.Url)
 
-	return NewSeqReader(sample.Id, url, binWidth, scale)
+	return NewSeqReader(sample, url, binWidth)
 }
 
 type SeqReader struct {
-	sampleId        string
+	sample          *Sample
 	url             string
 	binSize         int
 	defaultBinCount int
-	//reads           uint
 	//scale           float64
 }
 
-func NewSeqReader(sampleId string, url string, binSize int, scale float64) (*SeqReader, error) {
-
-	// path := filepath.Join(url, "track.db?mode=ro")
-
-	// db, err := sql.Open("sqlite3", path)
-
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// defer db.Close()
-
-	// var reads uint
-	// var name string
-	// err = db.QueryRow(TRACK_SQL).Scan(&name, &reads)
-
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// if err != nil {
-	// 	return nil, fmt.Errorf("error opening %s", file)
-	// }
-
-	// defer file.Close()
-	// // Create a scanner
-	// scanner := bufio.NewScanner(file)
-	// scanner.Scan()
-
-	// count, err := strconv.Atoi(scanner.Text())
-
-	// if err != nil {
-	// 	return nil, fmt.Errorf("could not count reads")
-	// }
+func NewSeqReader(sample *Sample, url string, binSize int) (*SeqReader, error) {
 
 	return &SeqReader{
-		sampleId: sampleId,
-		url:      url,
-		binSize:  binSize,
+		sample:  sample,
+		url:     url,
+		binSize: binSize,
+
 		// estimate the number of bins to represent a region
 		defaultBinCount: binSize * 4,
 	}, nil
@@ -556,22 +525,22 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*SampleBinCounts, er
 
 	// we return something for every call, even if data not available
 	ret := SampleBinCounts{
-		Id: reader.sampleId,
+		Id: reader.sample.Id,
 		//Name: reader.sample.Name,
 		//Track:    reader.Track,
 		//Location: location,
 		//Start:    startBin*reader.BinSize + 1,
 		//Chr:     location.Chr,
-		Bins:           make([]*ReadBin, 0, reader.defaultBinCount),
-		YMax:           0,
-		BinSize:        reader.binSize,
-		BpmScaleFactor: 0,
+		Bins:    make([]*ReadBin, 0, reader.defaultBinCount),
+		YMax:    0,
+		BinSize: reader.binSize,
+		Reads:   reader.sample.Reads,
 	}
 
 	// path := filepath.Join(reader.url,
 	// 	fmt.Sprintf("%s.db?mode=ro", location.Chr()))
 
-	path := filepath.Join(reader.url + "?mode=ro")
+	path := filepath.Join(reader.url + sys.SqliteReadOnlySuffix)
 
 	log.Debug().Msgf("track path %s", path)
 
@@ -583,16 +552,18 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*SampleBinCounts, er
 
 	defer db.Close()
 
+	var bpmReads int
 	var scaleFactor float64
 
-	err = db.QueryRow(BpmSql, reader.binSize).Scan(&scaleFactor) ///endBin)
+	err = db.QueryRow(BpmSql, reader.binSize).Scan(&bpmReads, &scaleFactor) ///endBin)
 
 	if err != nil {
 		log.Debug().Msgf("error scale factor %s %s", path, err)
 		return &ret, err
 	}
 
-	ret.BpmScaleFactor = scaleFactor
+	ret.BinReads = bpmReads
+	//ret.BpmScaleFactor = scaleFactor
 
 	//var binSql string
 
@@ -662,11 +633,11 @@ func rowsToSample(rows *sql.Rows) (*Sample, error) {
 	err := rows.Scan(&sample.Id,
 		&sample.Genome,
 		&sample.Assembly,
-		&sample.Platform,
+		&sample.Technology,
 		&sample.Dataset,
 		&sample.Name,
-		&sample.Reads,
 		&sample.Type,
+		&sample.Reads,
 		&sample.Url,
 		&tags)
 
@@ -686,11 +657,11 @@ func rowToSample(rows *sql.Row) (*Sample, error) {
 	err := rows.Scan(&sample.Id,
 		&sample.Genome,
 		&sample.Assembly,
-		&sample.Platform,
+		&sample.Technology,
 		&sample.Dataset,
 		&sample.Name,
-		&sample.Reads,
 		&sample.Type,
+		&sample.Reads,
 		&sample.Url,
 		&tags)
 

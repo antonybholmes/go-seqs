@@ -86,37 +86,37 @@ func ParseSeqParamsFromPost(c *gin.Context) (*SeqParams, error) {
 // 	web.MakeDataResp(c, "", platforms)
 // }
 
-func PlatformsRoute(c *gin.Context) {
-	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
+// func PlatformsRoute(c *gin.Context) {
+// 	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
 
-		assembly := c.Query("assembly")
+// 		assembly := c.Query("assembly")
 
-		platforms, err := seqdb.Platforms(assembly, isAdmin, user.Permissions)
-		if err != nil {
-			c.Error(err)
-			return
-		}
+// 		platforms, err := seqdb.Platforms(assembly, isAdmin, user.Permissions)
+// 		if err != nil {
+// 			c.Error(err)
+// 			return
+// 		}
 
-		web.MakeDataResp(c, "", platforms)
-	})
-}
+// 		web.MakeDataResp(c, "", platforms)
+// 	})
+// }
 
-func PlatformDatasetsRoute(c *gin.Context) {
-	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
+// func PlatformDatasetsRoute(c *gin.Context) {
+// 	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
 
-		platform := c.Param("platform")
-		assembly := c.Param("assembly")
+// 		platform := c.Param("platform")
+// 		assembly := c.Param("assembly")
 
-		tracks, err := seqdb.PlatformDatasets(platform, assembly, isAdmin, user.Permissions)
+// 		tracks, err := seqdb.PlatformDatasets(platform, assembly, isAdmin, user.Permissions)
 
-		if err != nil {
-			c.Error(err)
-			return
-		}
+// 		if err != nil {
+// 			c.Error(err)
+// 			return
+// 		}
 
-		web.MakeDataResp(c, "", tracks)
-	})
-}
+// 		web.MakeDataResp(c, "", tracks)
+// 	})
+// }
 
 func SearchSeqRoute(c *gin.Context) {
 	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
@@ -165,9 +165,7 @@ func BinsRoute(c *gin.Context) {
 					continue
 				}
 
-				reader, err := seqdb.ReaderFromId(sample,
-					params.BinSizes[li],
-					params.Scale)
+				reader, err := seqdb.ReaderFromId(sample, params.BinSizes[li])
 
 				if err != nil {
 					log.Debug().Msgf("getting bins for %s %v", sample, err)
