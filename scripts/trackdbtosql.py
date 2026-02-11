@@ -72,4 +72,5 @@ with open(out, "w") as fout:
                     FROM datasets WHERE public_id='{dataset_id}';""",
                     file=fout,
                 )
+
     print("COMMIT;", file=fout)

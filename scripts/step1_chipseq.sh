@@ -3,7 +3,7 @@ assembly=hg19
 dir=/home/antony/development/data/modules/seqs/${assembly}/ChIP-seq
 bin_widths=50,100,1000,10000 # 16,64,256,1024,4096,16384 # 10,100,1000,10000 #50,500,5000 #64,128,256,512,1024
 
-cat samples.txt | sed 1d | grep -v '#'| while read line
+cat chipseq.txt | sed 1d | grep -v '#'| while read line
 do
     bam=`echo "${line}" | cut -f1`
     dataset=`echo "${line}" | cut -f2`
