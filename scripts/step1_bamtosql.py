@@ -432,7 +432,6 @@ cursor.execute(
 	id INTEGER PRIMARY KEY,
     public_id TEXT NOT NULL UNIQUE,
 	assembly_id INTEGER NOT NULL,
-    technology_id INTEGER NOT NULL,
     name TEXT NOT NULL, 
     description TEXT NOT NULL DEFAULT '',
     tags TEXT NOT NULL DEFAULT '',
@@ -486,6 +485,7 @@ cursor.execute(
 	id INTEGER PRIMARY KEY,
     public_id TEXT NOT NULL UNIQUE,
 	dataset_id INTEGER NOT NULL,
+    technology_id INTEGER NOT NULL,
 	name TEXT NOT NULL UNIQUE,
     type_id INTEGER NOT NULL,
     reads INTEGER NOT NULL DEFAULT 0,
@@ -493,20 +493,10 @@ cursor.execute(
     description TEXT NOT NULL DEFAULT '',
     tags TEXT NOT NULL DEFAULT '',
 	FOREIGN KEY(dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
+    FOREIGN KEY(technology_id) REFERENCES technologies(id) ON DELETE CASCADE,
     FOREIGN KEY(type_id) REFERENCES sample_types(id) ON DELETE CASCADE
 );"""
 )
-
-for [dataset_name, dataset] in dataset_map.items():
-
-    cursor.execute(
-        f"""INSERT INTO datasets (id, public_id, assembly_id, technology_id, name) VALUES (
-            {dataset["index"]},
-            '{dataset["public_id"]}',
-            {dataset["assembly"]},
-            {dataset["technology"]},
-            '{dataset["name"]}');""",
-    )
 
 
 for root, dirs, files in os.walk(outdir):
@@ -540,7 +530,6 @@ for root, dirs, files in os.walk(outdir):
                 "public_id": str(uuid.uuid7()),
                 "index": len(dataset_map) + 1,
                 "assembly": assembly_map[assembly],
-                "technology": technology_map[technology],
                 "name": dataset_name,
             }
 
@@ -549,11 +538,10 @@ for root, dirs, files in os.walk(outdir):
             print(dataset)
 
             cursor.execute(
-                f"""INSERT INTO datasets (id, public_id, assembly_id, technology_id, name) VALUES (
+                f"""INSERT INTO datasets (id, public_id, assembly_id, name) VALUES (
                     {dataset["index"]},
                     '{dataset["public_id"]}',
                     {dataset["assembly"]},
-                    {dataset["technology"]},
                     '{dataset["name"]}');""",
             )
 
@@ -585,9 +573,10 @@ for root, dirs, files in os.walk(outdir):
                 "public_id": row["public_id"],
                 "assembly": row["assembly"],
                 "type_id": type_map["Seq"],
+                "technology_id": technology_map[technology],
                 "name": row["name"],
                 "reads": row["reads"],
-                "dataset_index": dataset["index"],
+                "dataset_id": dataset["index"],
                 "url": os.path.join(relative_dir, filename),  # where to find the sql db
             }
 
@@ -597,9 +586,10 @@ for root, dirs, files in os.walk(outdir):
 
         for row in data:
             cursor.execute(
-                f"""INSERT INTO samples (public_id, dataset_id, name, type_id, reads, url) VALUES (
+                f"""INSERT INTO samples (public_id, dataset_id, technology_id, name, type_id, reads, url) VALUES (
                     '{row["public_id"]}',
-                    {row["dataset_index"]},
+                    {row["dataset_id"]},
+                    {row["technology_id"]},
                     '{row["name"]}',
                     {row["type_id"]},
                     {row["reads"]},
@@ -624,7 +614,6 @@ for i, row in df_remote_bigwig_samples.iterrows():
             "public_id": str(uuid.uuid7()),
             "index": len(dataset_map) + 1,
             "assembly": assembly_map[assembly],
-            "technology": technology_map[technology],
             "name": dataset_name,
         }
 
@@ -633,7 +622,7 @@ for i, row in df_remote_bigwig_samples.iterrows():
         print(dataset)
 
         cursor.execute(
-            f"""INSERT INTO datasets (id, public_id, assembly_id, technology_id, name) VALUES (
+            f"""INSERT INTO datasets (id, public_id, assembly_id, name) VALUES (
                 {dataset["index"]},
                 '{dataset["public_id"]}',
                 {dataset["assembly"]},
@@ -653,11 +642,17 @@ for i, row in df_remote_bigwig_samples.iterrows():
 
             if tokens[0] == "bigDataUrl":
                 url = tokens[1]
+
+                if "bw" not in url and "bigWig" not in url:
+                    print("Warning: url does not seem to be a bigwig", url)
+                    continue
+
                 id = str(uuid.uuid7())
                 cursor.execute(
-                    f"""INSERT INTO samples (public_id, dataset_id, name, type_id, reads, url, tags) VALUES (
+                    f"""INSERT INTO samples (public_id, dataset_id, technology_id, name, type_id, reads, url, tags) VALUES (
                     '{id}',
                     {dataset["index"]},
+                    {technology_map[technology]},
                     '{name}',
                     {type_map["Remote BigWig"]},
                     -1,

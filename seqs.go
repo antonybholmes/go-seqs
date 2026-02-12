@@ -75,35 +75,33 @@ type (
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
 const (
-	TechnologiesSql = `SELECT DISTINCT
-		d.public_id,
-		g.name as genome,
-		a.name as assembly, 
-		t.name as technology
-		FROM datasets d
-		JOIN assemblies a ON d.assembly_id = a.id
-		JOIN genomes g ON a.genome_id = g.id
-		JOIN technologies t ON d.technology_id = t.id
-		JOIN dataset_permissions dp ON d.id = dp.dataset_id
-		JOIN permissions p ON dp.permission_id = p.id
-		WHERE 
-			<<PERMISSIONS>>
-			AND LOWER(a.name) = :assembly
-		ORDER BY
-			g.name,
-			a.name,
-			t.name`
+	// TechnologiesSql = `SELECT DISTINCT
+	// 	d.public_id,
+	// 	g.name as genome,
+	// 	a.name as assembly,
+	// 	t.name as technology
+	// 	FROM datasets d
+	// 	JOIN assemblies a ON d.assembly_id = a.id
+	// 	JOIN genomes g ON a.genome_id = g.id
+	// 	JOIN technologies t ON d.technology_id = t.id
+	// 	JOIN dataset_permissions dp ON d.id = dp.dataset_id
+	// 	JOIN permissions p ON dp.permission_id = p.id
+	// 	WHERE
+	// 		<<PERMISSIONS>>
+	// 		AND LOWER(a.name) = :assembly
+	// 	ORDER BY
+	// 		g.name,
+	// 		a.name,
+	// 		t.name`
 
 	DatasetsSql = `SELECT DISTINCT
 		d.public_id,
 		g.name as genome,
 		a.name as assembly, 
-		t.name as technology,
 		d.name
 		FROM datasets d
 		JOIN assemblies a ON d.assembly_id = a.id
 		JOIN genomes g ON a.genome_id = g.id
-		JOIN technologies t ON d.technology_id = t.id
 		JOIN dataset_permissions dp ON d.id = dp.dataset_id
 		JOIN permissions p ON dp.permission_id = p.id
 		WHERE 
@@ -113,23 +111,23 @@ const (
 			g.name, 
 			a.name`
 
-	TechnologyDatasetsSql = `SELECT DISTINCT
-		d.public_id,
-		a.name as assembly, 
-		t.name as technology, 	
-		d.name
-		FROM datasets d
-		JOIN assemblies a ON d.assembly_id = a.id
-		JOIN technologies t ON d.technology_id = t.id
-		JOIN dataset_permissions dp ON d.id = dp.dataset_id
-		JOIN permissions p ON dp.permission_id = p.id
-		WHERE 
-			<<PERMISSIONS>>
-			AND t.name = :technology
-			AND LOWER(a.name) = :assembly
-		ORDER BY
-			a.name,
-			d.name`
+	// TechnologyDatasetsSql = `SELECT DISTINCT
+	// 	d.public_id,
+	// 	a.name as assembly,
+	// 	t.name as technology,
+	// 	d.name
+	// 	FROM datasets d
+	// 	JOIN assemblies a ON d.assembly_id = a.id
+	// 	JOIN technologies t ON d.technology_id = t.id
+	// 	JOIN dataset_permissions dp ON d.id = dp.dataset_id
+	// 	JOIN permissions p ON dp.permission_id = p.id
+	// 	WHERE
+	// 		<<PERMISSIONS>>
+	// 		AND t.name = :technology
+	// 		AND LOWER(a.name) = :assembly
+	// 	ORDER BY
+	// 		a.name,
+	// 		d.name`
 
 	//const TRACK_SQL = `SELECT name, reads FROM track`
 
@@ -158,7 +156,7 @@ const (
 		JOIN datasets d ON s.dataset_id = d.id
 		JOIN assemblies a ON d.assembly_id = a.id
 		JOIN genomes g ON a.genome_id = g.id
-		JOIN technologies t ON d.technology_id = t.id
+		JOIN technologies t ON s.technology_id = t.id
 		JOIN sample_types st ON s.type_id = st.id`
 
 	DatasetSamplesSql = SelectSampleSql +
@@ -182,7 +180,12 @@ const (
 			s.name`
 
 	SearchSamplesSql = BaseSearchSamplesSql +
-		` AND (s.public_id = :id OR d.public_id = :id OR a.name = :id OR d.name LIKE :q OR s.name LIKE :q)
+		` AND (
+			s.public_id = :id 
+			OR d.public_id = :id 
+			OR LOWER(a.name) = :id 
+			OR d.name LIKE :q 
+			OR s.name LIKE :q)
 		ORDER BY 
 			t.name, 
 			d.name, 
@@ -195,7 +198,7 @@ const (
 	// 		d.name,
 	// 		s.name`
 
-	BpmSql = `SELECT reads, bpm_scale_factor FROM bins WHERE size = :bin_size`
+	BpmSql = `SELECT reads FROM bins WHERE size = :bin_size`
 
 	ReadsSql = `SELECT 
 		r.start, 
@@ -553,9 +556,9 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*SampleBinCounts, er
 	defer db.Close()
 
 	var bpmReads int
-	var scaleFactor float64
+	//var scaleFactor float64
 
-	err = db.QueryRow(BpmSql, reader.binSize).Scan(&bpmReads, &scaleFactor) ///endBin)
+	err = db.QueryRow(BpmSql, reader.binSize).Scan(&bpmReads) ///endBin)
 
 	if err != nil {
 		log.Debug().Msgf("error scale factor %s %s", path, err)
