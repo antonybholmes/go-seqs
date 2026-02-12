@@ -32,7 +32,7 @@ parser.add_argument(
     help="tsv file with columns: dataset, sample, paired, bam, genome, assembly, type",
 )
 parser.add_argument(
-    "--create-samples", action="store_true", default=True, help="data is paired end"
+    "--no-create-samples", action="store_true", help="data is paired end"
 )
 parser.add_argument(
     "--mode",
@@ -52,11 +52,11 @@ args = parser.parse_args()
 bin_sizes = [int(w) for w in args.widths.split(",")]
 outdir = args.out
 samples_file = args.samples
-createSamples = args.create_samples
+create_samples = not args.no_create_samples
 mode = args.mode
 min_reads = int(args.min_reads)
 
-print("mode", mode, createSamples, min_reads)
+print("mode", mode, create_samples, min_reads)
 
 
 df_samples = pd.read_csv(samples_file, sep="\t", header=0, keep_default_na=False)
@@ -83,7 +83,7 @@ for i, row in df_seq_samples.iterrows():
     assembly = row["assembly"]
     technology = row["technology"]
 
-    if not createSamples:
+    if not create_samples:
         continue
 
     out = re.sub(r" +", "_", sample)
@@ -435,8 +435,7 @@ cursor.execute(
     name TEXT NOT NULL, 
     description TEXT NOT NULL DEFAULT '',
     tags TEXT NOT NULL DEFAULT '',
-	FOREIGN KEY(assembly_id) REFERENCES assemblies(id) ON DELETE CASCADE,
-    FOREIGN KEY(technology_id) REFERENCES technologies(id) ON DELETE CASCADE
+	FOREIGN KEY(assembly_id) REFERENCES assemblies(id) ON DELETE CASCADE
 );
 """
 )
@@ -626,7 +625,6 @@ for i, row in df_remote_bigwig_samples.iterrows():
                 {dataset["index"]},
                 '{dataset["public_id"]}',
                 {dataset["assembly"]},
-                {dataset["technology"]},
                 '{dataset["name"]}');""",
         )
 

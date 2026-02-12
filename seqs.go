@@ -678,6 +678,10 @@ func rowToSample(rows *sql.Row) (*Sample, error) {
 }
 
 func TagsToList(tags string) []string {
+	if tags == "" {
+		return []string{}
+	}
+
 	tagList := strings.Split(tags, ",")
 	sort.Strings(tagList)
 	// trim
