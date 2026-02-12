@@ -118,9 +118,9 @@ func ParseSeqParamsFromPost(c *gin.Context) (*SeqParams, error) {
 // 	})
 // }
 
-func SearchSeqRoute(c *gin.Context) {
+func SearchSamplesRoute(c *gin.Context) {
 	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
-		assembly := c.Query("assembly")
+		assembly := c.Param("assembly")
 
 		if assembly == "" {
 			web.BadReqResp(c, ErrNoGenomeSupplied)
