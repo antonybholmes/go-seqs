@@ -183,7 +183,7 @@ const (
 		` AND (
 			s.public_id = :id 
 			OR d.public_id = :id 
-			OR LOWER(a.name) = :id 
+			OR LOWER(t.name) = :id 
 			OR d.name LIKE :q 
 			OR s.name LIKE :q)
 		ORDER BY 
