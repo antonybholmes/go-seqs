@@ -379,6 +379,8 @@ cursor.execute(
     """,
 )
 
+cursor.execute("CREATE INDEX idx_genomes_name_id ON genomes(LOWER(name));")
+
 cursor.execute(
     f"INSERT INTO genomes (id, public_id, name, scientific_name) VALUES (1, '{uuid.uuid7()}', 'Human', 'Homo sapiens');"
 )
@@ -396,6 +398,9 @@ cursor.execute(
         FOREIGN KEY (genome_id) REFERENCES genomes(id) ON DELETE CASCADE);
     """,
 )
+
+cursor.execute("CREATE INDEX idx_assemblies_name_id ON assemblies(LOWER(name));")
+cursor.execute("CREATE INDEX idx_assemblies_genome_id ON assemblies(genome_id);")
 
 cursor.execute(
     f"INSERT INTO assemblies (id, public_id, genome_id, name) VALUES (1, '{uuid.uuid7()}', 1, 'hg19');"
@@ -416,6 +421,8 @@ cursor.execute(
     """,
 )
 
+cursor.execute("CREATE INDEX idx_technologies_name_id ON technologies(LOWER(name));")
+
 cursor.execute(
     f"INSERT INTO technologies (id, public_id, name) VALUES (1, '{uuid.uuid7()}', 'ChIP-seq');"
 )
@@ -435,10 +442,11 @@ cursor.execute(
     name TEXT NOT NULL, 
     description TEXT NOT NULL DEFAULT '',
     tags TEXT NOT NULL DEFAULT '',
-	FOREIGN KEY(assembly_id) REFERENCES assemblies(id) ON DELETE CASCADE
-);
+	FOREIGN KEY(assembly_id) REFERENCES assemblies(id) ON DELETE CASCADE);
 """
 )
+cursor.execute(f"CREATE INDEX idx_datasets_name_id ON datasets(LOWER(name));")
+cursor.execute("CREATE INDEX idx_datasets_assembly_id ON datasets(assembly_id);")
 
 cursor.execute(
     f""" CREATE TABLE permissions (
@@ -457,6 +465,14 @@ cursor.execute(
     FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE);
 """
 )
+
+cursor.execute(
+    f"CREATE INDEX idx_dataset_permissions_dataset_id ON dataset_permissions(dataset_id);"
+)
+cursor.execute(
+    f"CREATE INDEX idx_dataset_permissions_permission_id ON dataset_permissions(permission_id);"
+)
+
 
 rdfViewId = str(uuid.uuid7())
 
@@ -493,9 +509,13 @@ cursor.execute(
     tags TEXT NOT NULL DEFAULT '',
 	FOREIGN KEY(dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
     FOREIGN KEY(technology_id) REFERENCES technologies(id) ON DELETE CASCADE,
-    FOREIGN KEY(type_id) REFERENCES sample_types(id) ON DELETE CASCADE
-);"""
+    FOREIGN KEY(type_id) REFERENCES sample_types(id) ON DELETE CASCADE);
+    """
 )
+cursor.execute(f"CREATE INDEX idx_samples_name_id ON samples(LOWER(name));")
+cursor.execute(f"CREATE INDEX idx_samples_dataset_id ON samples(dataset_id);")
+cursor.execute(f"CREATE INDEX idx_samples_technology_id ON samples(technology_id);")
+cursor.execute(f"CREATE INDEX idx_samples_type_id ON samples(type_id);")
 
 
 for root, dirs, files in os.walk(outdir):
@@ -664,7 +684,6 @@ cursor.execute(
         SELECT id, 1 FROM datasets;""",
 )
 
-cursor.execute(f"CREATE INDEX idx_datasets_name_id ON datasets(LOWER(name));")
-cursor.execute(f"CREATE INDEX idx_samples_name_id ON samples(LOWER(name));")
+
 conn.commit()
 conn.close()
