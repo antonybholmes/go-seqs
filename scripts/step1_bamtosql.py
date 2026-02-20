@@ -75,6 +75,7 @@ current_dataset = None
 dataset_map = {}
 
 for i, row in df_seq_samples.iterrows():
+    institution = row["institution"]
     dataset = row["dataset"]
     sample = row["sample"]
     paired = row["paired"] == "True"
@@ -88,7 +89,7 @@ for i, row in df_seq_samples.iterrows():
 
     out = re.sub(r" +", "_", sample)
 
-    dir = os.path.join(outdir, assembly, technology, dataset)
+    dir = os.path.join(outdir, assembly, technology, institution, dataset)
 
     dir = re.sub(r" +", "_", dir).replace("&", "_AND_")
 
@@ -114,6 +115,7 @@ for i, row in df_seq_samples.iterrows():
         f""" CREATE TABLE sample (
         id INTEGER PRIMARY KEY,
         public_id TEXT NOT NULL UNIQUE,
+        institution TEXT NOT NULL,
         dataset TEXT NOT NULL,
         genome TEXT NOT NULL,
         assembly TEXT NOT NULL,
@@ -316,9 +318,10 @@ for i, row in df_seq_samples.iterrows():
                 )
 
     cursor.execute(
-        f"""INSERT INTO sample (id, public_id, dataset, genome, assembly, technology, name, reads) VALUES (
+        f"""INSERT INTO sample (id, public_id, institution, dataset, genome, assembly, technology, name, reads) VALUES (
             1, 
             '{str(uuid.uuid7())}', 
+            '{institution}', 
             '{dataset}', 
             '{genome}', 
             '{assembly}', 
@@ -433,20 +436,39 @@ cursor.execute(
     f"INSERT INTO technologies (id, public_id, name) VALUES (3, '{uuid.uuid7()}', 'CUT&RUN');"
 )
 
+cursor.execute(
+    f"""
+    CREATE TABLE institutions (
+        id INTEGER PRIMARY KEY,
+        public_id TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL UNIQUE);
+    """,
+)
+
+cursor.execute("CREATE INDEX idx_institutions_name_id ON institutions(LOWER(name));")
+cursor.execute(
+    f"INSERT INTO institutions (id, public_id, name) VALUES (1, '{uuid.uuid7()}', 'Columbia');"
+)
+
+institution_map = {"Columbia": 1}
+
 
 cursor.execute(
     f""" CREATE TABLE datasets (
 	id INTEGER PRIMARY KEY,
     public_id TEXT NOT NULL UNIQUE,
 	assembly_id INTEGER NOT NULL,
+    institution_id INTEGER NOT NULL,
     name TEXT NOT NULL, 
     description TEXT NOT NULL DEFAULT '',
     tags TEXT NOT NULL DEFAULT '',
-	FOREIGN KEY(assembly_id) REFERENCES assemblies(id) ON DELETE CASCADE);
+	FOREIGN KEY(assembly_id) REFERENCES assemblies(id) ON DELETE CASCADE,
+    FOREIGN KEY(institution_id) REFERENCES institutions(id) ON DELETE CASCADE);
 """
 )
 cursor.execute(f"CREATE INDEX idx_datasets_name_id ON datasets(LOWER(name));")
 cursor.execute("CREATE INDEX idx_datasets_assembly_id ON datasets(assembly_id);")
+cursor.execute("CREATE INDEX idx_datasets_institution_id ON datasets(institution_id);")
 
 cursor.execute(
     f""" CREATE TABLE permissions (
@@ -499,14 +521,16 @@ cursor.execute(
     f""" CREATE TABLE samples (
 	id INTEGER PRIMARY KEY,
     public_id TEXT NOT NULL UNIQUE,
-	dataset_id INTEGER NOT NULL,
-    technology_id INTEGER NOT NULL,
+	technology_id INTEGER NOT NULL,
+    institution_id INTEGER NOT NULL,
+    dataset_id INTEGER NOT NULL,
 	name TEXT NOT NULL UNIQUE,
     type_id INTEGER NOT NULL,
     reads INTEGER NOT NULL DEFAULT 0,
     url TEXT NOT NULL DEFAULT '',
     description TEXT NOT NULL DEFAULT '',
     tags TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY(institution_id) REFERENCES institutions(id) ON DELETE CASCADE,
 	FOREIGN KEY(dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
     FOREIGN KEY(technology_id) REFERENCES technologies(id) ON DELETE CASCADE,
     FOREIGN KEY(type_id) REFERENCES sample_types(id) ON DELETE CASCADE);
@@ -516,6 +540,7 @@ cursor.execute(f"CREATE INDEX idx_samples_name_id ON samples(LOWER(name));")
 cursor.execute(f"CREATE INDEX idx_samples_dataset_id ON samples(dataset_id);")
 cursor.execute(f"CREATE INDEX idx_samples_technology_id ON samples(technology_id);")
 cursor.execute(f"CREATE INDEX idx_samples_type_id ON samples(type_id);")
+cursor.execute(f"CREATE INDEX idx_samples_institution_id ON samples(institution_id);")
 
 
 for root, dirs, files in os.walk(outdir):
@@ -537,11 +562,20 @@ for root, dirs, files in os.walk(outdir):
 
         relative_dir = root.replace(outdir, "")[1:]
 
-        assembly, technology, dataset_name = relative_dir.split("/")
+        assembly, technology, institution, dataset_name = relative_dir.split("/")
 
         technology = technology.replace("_AND_", "&")
 
         sample = filename.replace(".db", "")
+
+        if institution not in institution_map:
+            institution_id = len(institution_map) + 1
+
+            print(institution, institution_id)
+            institution_map[institution] = institution_id
+            cursor.execute(
+                f"INSERT INTO institutions (id, public_id, name) VALUES ({institution_id}, '{uuid.uuid7()}', '{institution}');"
+            )
 
         if dataset_name not in dataset_map:
             dataset_id = uuid.uuid7()
@@ -549,6 +583,7 @@ for root, dirs, files in os.walk(outdir):
                 "public_id": str(uuid.uuid7()),
                 "index": len(dataset_map) + 1,
                 "assembly": assembly_map[assembly],
+                "institution": institution_map[institution],
                 "name": dataset_name,
             }
 
@@ -557,10 +592,11 @@ for root, dirs, files in os.walk(outdir):
             print(dataset)
 
             cursor.execute(
-                f"""INSERT INTO datasets (id, public_id, assembly_id, name) VALUES (
+                f"""INSERT INTO datasets (id, public_id, assembly_id, institution_id, name) VALUES (
                     {dataset["index"]},
                     '{dataset["public_id"]}',
                     {dataset["assembly"]},
+                    {dataset["institution"]},
                     '{dataset["name"]}');""",
             )
 
@@ -596,6 +632,7 @@ for root, dirs, files in os.walk(outdir):
                 "name": row["name"],
                 "reads": row["reads"],
                 "dataset_id": dataset["index"],
+                "institution_id": institution_map[institution],
                 "url": os.path.join(relative_dir, filename),  # where to find the sql db
             }
 
@@ -605,10 +642,11 @@ for root, dirs, files in os.walk(outdir):
 
         for row in data:
             cursor.execute(
-                f"""INSERT INTO samples (public_id, dataset_id, technology_id, name, type_id, reads, url) VALUES (
+                f"""INSERT INTO samples (public_id, technology_id, institution_id, dataset_id, name, type_id, reads, url) VALUES (
                     '{row["public_id"]}',
-                    {row["dataset_id"]},
                     {row["technology_id"]},
+                    {row["institution_id"]},
+                    {row["dataset_id"]},
                     '{row["name"]}',
                     {row["type_id"]},
                     {row["reads"]},
@@ -619,6 +657,7 @@ for root, dirs, files in os.walk(outdir):
 for i, row in df_remote_bigwig_samples.iterrows():
     # insert the remote bigwig samples as well
     dataset_name = row["dataset"]
+    institution = row["institution"]
     sample = row["sample"]
     genome = row["genome"]
     assembly = row["assembly"]
@@ -627,12 +666,20 @@ for i, row in df_remote_bigwig_samples.iterrows():
     file = row["file"]
     scale = row["scale"]
 
+    if institution not in institution_map:
+        institution_id = len(institution_map) + 1
+        institution_map[institution] = institution_id
+        cursor.execute(
+            f"INSERT INTO institutions (id, public_id, name) VALUES ({institution_id}, '{uuid.uuid7()}', '{institution}');"
+        )
+
     if dataset_name not in dataset_map:
         dataset_id = uuid.uuid7()
         dataset = {
             "public_id": str(uuid.uuid7()),
             "index": len(dataset_map) + 1,
             "assembly": assembly_map[assembly],
+            "institution": institution_map[institution],
             "name": dataset_name,
         }
 
@@ -641,10 +688,11 @@ for i, row in df_remote_bigwig_samples.iterrows():
         print(dataset)
 
         cursor.execute(
-            f"""INSERT INTO datasets (id, public_id, assembly_id, name) VALUES (
+            f"""INSERT INTO datasets (id, public_id, assembly_id, institution_id, name) VALUES (
                 {dataset["index"]},
                 '{dataset["public_id"]}',
                 {dataset["assembly"]},
+                {dataset["institution"]},
                 '{dataset["name"]}');""",
         )
 
@@ -667,10 +715,11 @@ for i, row in df_remote_bigwig_samples.iterrows():
 
                 id = str(uuid.uuid7())
                 cursor.execute(
-                    f"""INSERT INTO samples (public_id, dataset_id, technology_id, name, type_id, reads, url, tags) VALUES (
+                    f"""INSERT INTO samples (public_id, technology_id, institution_id, dataset_id, name, type_id, reads, url, tags) VALUES (
                     '{id}',
-                    {dataset["index"]},
                     {technology_map[technology]},
+                    {institution_map[institution]},
+                    {dataset["index"]},
                     '{name}',
                     {type_map["Remote BigWig"]},
                     -1,

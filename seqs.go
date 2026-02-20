@@ -41,25 +41,27 @@ type (
 	}
 
 	Dataset struct {
-		Id       string    `json:"id"`
-		Genome   string    `json:"genome"`
-		Assembly string    `json:"assembly"`
-		Platform string    `json:"platform"`
-		Name     string    `json:"name"`
-		Samples  []*Sample `json:"samples"`
+		Id          string    `json:"id"`
+		Genome      string    `json:"genome"`
+		Assembly    string    `json:"assembly"`
+		Platform    string    `json:"platform"`
+		Institution string    `json:"institution"`
+		Name        string    `json:"name"`
+		Samples     []*Sample `json:"samples"`
 	}
 
 	Sample struct {
-		Id         string   `json:"id"`
-		Genome     string   `json:"genome"`
-		Assembly   string   `json:"assembly"`
-		Technology string   `json:"technology"`
-		Dataset    string   `json:"dataset"`
-		Name       string   `json:"name"`
-		Type       string   `json:"type"`
-		Url        string   `json:"url"`
-		Tags       []string `json:"tags"`
-		Reads      int      `json:"reads"`
+		Id          string   `json:"id"`
+		Genome      string   `json:"genome"`
+		Assembly    string   `json:"assembly"`
+		Technology  string   `json:"technology"`
+		Institution string   `json:"institution"`
+		Dataset     string   `json:"dataset"`
+		Name        string   `json:"name"`
+		Type        string   `json:"type"`
+		Url         string   `json:"url"`
+		Tags        []string `json:"tags"`
+		Reads       int      `json:"reads"`
 	}
 
 	SeqDB struct {
@@ -96,10 +98,12 @@ const (
 
 	DatasetsSql = `SELECT DISTINCT
 		d.public_id,
-		g.name as genome,
-		a.name as assembly, 
+		g.name AS genome,
+		a.name AS assembly,
+		ins.name AS institution,
 		d.name
 		FROM datasets d
+		JOIN institutions ins ON d.institution_id = ins.id
 		JOIN assemblies a ON d.assembly_id = a.id
 		JOIN genomes g ON a.genome_id = g.id
 		JOIN dataset_permissions dp ON d.id = dp.dataset_id
@@ -109,7 +113,9 @@ const (
 			AND LOWER(a.name) = :assembly
 		ORDER BY
 			g.name, 
-			a.name`
+			a.name,
+			ins.name,
+			d.name`
 
 	// TechnologyDatasetsSql = `SELECT DISTINCT
 	// 	d.public_id,
@@ -145,7 +151,8 @@ const (
 		s.public_id,
 		g.name AS genome,
 		a.name AS assembly,
-		t.name AS technology, 	
+		t.name AS technology,
+		ins.name AS institution,
 		d.name AS dataset_name,
 		s.name AS sample_name,
 		st.name AS sample_type, 
@@ -154,6 +161,7 @@ const (
 		s.tags
 		FROM samples s
 		JOIN datasets d ON s.dataset_id = d.id
+		JOIN institutions ins ON d.institution_id = ins.id
 		JOIN assemblies a ON d.assembly_id = a.id
 		JOIN genomes g ON a.genome_id = g.id
 		JOIN technologies t ON s.technology_id = t.id
@@ -175,7 +183,8 @@ const (
 
 	AllSamplesSql = BaseSearchSamplesSql +
 		` ORDER BY 
-			t.name, 
+			t.name,
+			ins.name,
 			d.name, 
 			s.name`
 
@@ -187,7 +196,8 @@ const (
 			OR d.name LIKE :q 
 			OR s.name LIKE :q)
 		ORDER BY 
-			t.name, 
+			t.name,
+			ins.name,
 			d.name, 
 			s.name`
 
@@ -333,6 +343,7 @@ func (sdb *SeqDB) Datasets(assembly string, isAdmin bool, permissions []string) 
 		err := rows.Scan(&dataset.Id,
 			&dataset.Assembly,
 			&dataset.Platform,
+			&dataset.Institution,
 			&dataset.Name)
 
 		if err != nil {
@@ -637,6 +648,7 @@ func rowsToSample(rows *sql.Rows) (*Sample, error) {
 		&sample.Genome,
 		&sample.Assembly,
 		&sample.Technology,
+		&sample.Institution,
 		&sample.Dataset,
 		&sample.Name,
 		&sample.Type,
