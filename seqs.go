@@ -673,6 +673,7 @@ func rowToSample(rows *sql.Row) (*Sample, error) {
 		&sample.Genome,
 		&sample.Assembly,
 		&sample.Technology,
+		&sample.Institution,
 		&sample.Dataset,
 		&sample.Name,
 		&sample.Type,
