@@ -8,7 +8,7 @@ import (
 	"github.com/antonybholmes/go-seqs/seqdb"
 	"github.com/antonybholmes/go-sys/log"
 	"github.com/antonybholmes/go-web"
-	"github.com/antonybholmes/go-web/auth"
+	"github.com/antonybholmes/go-web/auth/token"
 	"github.com/antonybholmes/go-web/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -119,7 +119,7 @@ func ParseSeqParamsFromPost(c *gin.Context) (*SeqParams, error) {
 // }
 
 func SearchSamplesRoute(c *gin.Context) {
-	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
+	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *token.AuthUserJwtClaims) {
 		assembly := c.Param("assembly")
 
 		if assembly == "" {
@@ -141,7 +141,7 @@ func SearchSamplesRoute(c *gin.Context) {
 }
 
 func BinsRoute(c *gin.Context) {
-	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *auth.AuthUserJwtClaims) {
+	middleware.JwtUserWithPermissionsRoute(c, func(c *gin.Context, isAdmin bool, user *token.AuthUserJwtClaims) {
 		params, err := ParseSeqParamsFromPost(c)
 
 		if err != nil {
