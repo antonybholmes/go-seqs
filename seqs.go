@@ -229,7 +229,7 @@ func (sdb *SeqDB) Dir() string {
 }
 
 func NewSeqDB(url string) *SeqDB {
-	db := sys.Must(sql.Open(sys.Sqlite3DB, filepath.Join(url, "seqs.db"+sys.SqliteReadOnlySuffix)))
+	db := sys.Must(sql.Open(sys.Sqlite3DB, filepath.Join(url, "seqs.db"+sys.SqliteDSN)))
 
 	//x := sys.Must(db.Prepare(ALL_TRACKS_SQL))
 
@@ -554,9 +554,9 @@ func (reader *SeqReader) BinCounts(location *dna.Location) (*SampleBinCounts, er
 	// path := filepath.Join(reader.url,
 	// 	fmt.Sprintf("%s.db?mode=ro", location.Chr()))
 
-	path := filepath.Join(reader.url + sys.SqliteReadOnlySuffix)
+	path := filepath.Join(reader.url + sys.SqliteDSN)
 
-	log.Debug().Msgf("track path %s", path)
+	//log.Debug().Msgf("track path %s", path)
 
 	db, err := sql.Open(sys.Sqlite3DB, path)
 
