@@ -12,13 +12,13 @@ replace github.com/antonybholmes/go-web => ../go-web
 
 require (
 	github.com/antonybholmes/go-basemath v0.0.0-20260204001030-d512600734fa
-	github.com/antonybholmes/go-sys v0.0.0-20260302215512-25fe845a717e
+	github.com/antonybholmes/go-sys v0.0.0-20260309200013-0638ffae4b9c
 	github.com/gin-gonic/gin v1.12.0
-	github.com/mattn/go-sqlite3 v1.14.34
+	github.com/mattn/go-sqlite3 v1.14.37
 )
 
 require (
-	github.com/bytedance/gopkg v0.1.3 // indirect
+	github.com/bytedance/gopkg v0.1.4 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect
 	github.com/bytedance/sonic/loader v0.5.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -30,7 +30,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.30.1 // indirect
-	github.com/goccy/go-json v0.10.5 // indirect
+	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -64,18 +64,18 @@ require (
 	github.com/xyproto/randomstring v1.2.0 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	golang.org/x/arch v0.25.0 // indirect
-	golang.org/x/crypto v0.48.0 // indirect
+	golang.org/x/crypto v0.49.0 // indirect
 	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90 // indirect
-	golang.org/x/net v0.51.0 // indirect
+	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
 require (
-	github.com/antonybholmes/go-dna v0.0.0-20260302203000-6aa894cd8cd9
-	github.com/antonybholmes/go-web v0.0.0-20260302203001-1755b56a0073
+	github.com/antonybholmes/go-dna v0.0.0-20260309200007-ac68806faf01
+	github.com/antonybholmes/go-web v0.0.0-20260309200008-c8713eea1d0c
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	golang.org/x/sys v0.42.0 // indirect
