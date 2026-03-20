@@ -293,6 +293,8 @@ for i, row in df_seq_samples.iterrows():
 
             if current_count > 0:
                 # in this 1 based system, start and end are inclusive
+                # thus in 10bp window, it will start at 1 and end at 10 and
+                # the next window will start at 11 etc.
                 start1 = start_bin * bin_size + 1
                 end1 = (bins[-1] + 1) * bin_size
                 kb = (end1 - start1 + 1) / 1000
