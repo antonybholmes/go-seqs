@@ -12,9 +12,9 @@ replace github.com/antonybholmes/go-web => ../go-web
 
 require (
 	github.com/antonybholmes/go-basemath v0.0.0-20260313220641-74ea9151950a
-	github.com/antonybholmes/go-sys v0.0.0-20260318223134-b63e69af9c78
+	github.com/antonybholmes/go-sys v0.0.0-20260403172913-edaeb305202e
 	github.com/gin-gonic/gin v1.12.0
-	github.com/mattn/go-sqlite3 v1.14.38
+	github.com/mattn/go-sqlite3 v1.14.42
 )
 
 require (
@@ -63,20 +63,20 @@ require (
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 	github.com/xyproto/randomstring v1.2.0 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
-	golang.org/x/arch v0.25.0 // indirect
-	golang.org/x/crypto v0.49.0 // indirect
-	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90 // indirect
-	golang.org/x/net v0.52.0 // indirect
+	golang.org/x/arch v0.26.0 // indirect
+	golang.org/x/crypto v0.50.0 // indirect
+	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
+	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
 require (
-	github.com/antonybholmes/go-dna v0.0.0-20260318223128-1e88b5211586
-	github.com/antonybholmes/go-web v0.0.0-20260320225304-eb0e29bef5ea
+	github.com/antonybholmes/go-dna v0.0.0-20260403172902-c96bf99098ff
+	github.com/antonybholmes/go-web v0.0.0-20260403172903-f845fdd34082
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
-	golang.org/x/sys v0.42.0 // indirect
+	github.com/mattn/go-isatty v0.0.21 // indirect
+	golang.org/x/sys v0.43.0 // indirect
 )
