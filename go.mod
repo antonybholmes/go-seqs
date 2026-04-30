@@ -14,7 +14,7 @@ require (
 	github.com/antonybholmes/go-basemath v0.0.0-20260422134522-9e8f9f5650da
 	github.com/antonybholmes/go-sys v0.0.0-20260422134523-dadad00d6c60
 	github.com/gin-gonic/gin v1.12.0
-	github.com/mattn/go-sqlite3 v1.14.42
+	github.com/mattn/go-sqlite3 v1.14.44
 )
 
 require (
@@ -22,7 +22,7 @@ require (
 	github.com/bytedance/sonic v1.15.1 // indirect
 	github.com/bytedance/sonic/loader v0.5.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cloudwego/base64x v0.1.6 // indirect
+	github.com/cloudwego/base64x v0.1.7 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/gin-contrib/sessions v1.0.2 // indirect
