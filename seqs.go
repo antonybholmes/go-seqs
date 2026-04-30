@@ -4,13 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
-	"sort"
 	"strings"
 
-	basemath "github.com/antonybholmes/go-basemath"
 	"github.com/antonybholmes/go-dna"
 	"github.com/antonybholmes/go-sys"
-	"github.com/antonybholmes/go-sys/log"
 	"github.com/antonybholmes/go-web"
 	"github.com/antonybholmes/go-web/auth/sqlite"
 	_ "github.com/mattn/go-sqlite3"
@@ -30,7 +27,10 @@ type (
 		YMax    float64    `json:"ymax"`
 		BinSize int        `json:"binSize"`
 		//BpmScaleFactor float64    `json:"bpmScaleFactor"`
-		Reads    int `json:"reads"`
+		Reads int `json:"reads"`
+
+		// sum of all reads falling in all bins, which
+		// can be higher than total reads in sample if some reads fall in multiple bins
 		BinReads int `json:"binReads"`
 	}
 
@@ -77,6 +77,10 @@ type (
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
 const (
+	SampleTypeSeq         = "Seq"
+	SampleTypeBigWig      = "Remote BigWig"
+	SampleTypeLocalBigWig = "BigWig"
+
 	// TechnologiesSql = `SELECT DISTINCT
 	// 	d.public_id,
 	// 	g.name as genome,
@@ -200,28 +204,6 @@ const (
 			ins.name,
 			d.name, 
 			s.name`
-
-	// SearchPlatformSamplesSql = BaseSearchSamplesSql +
-	// 	` AND d.platform = :platform
-	// 	AND (s.id = :id OR d.id = :id OR d.name LIKE :q OR s.name LIKE :q)
-	// 	ORDER BY
-	// 		d.name,
-	// 		s.name`
-
-	BpmSql = `SELECT reads FROM bins WHERE size = :bin_size`
-
-	ReadsSql = `SELECT 
-		r.start, 
-		r.end, 
-		r.count 
-		FROM reads r
-		JOIN bins b ON r.bin_id = b.id
-		JOIN chromosomes c ON r.chr_id = c.id
- 		WHERE c.name = :chr 
-			AND b.size = :bin 
-			AND r.start <= :end 
-			AND r.end >= :start
-		ORDER BY r.start`
 )
 
 func (sdb *SeqDB) Dir() string {
@@ -491,7 +473,11 @@ func (sdb *SeqDB) Search(query string, assembly string, isAdmin bool, permission
 	return ret, nil
 }
 
-func (sdb *SeqDB) SampleReader(sampleId string, binWidth int) (*SeqReader, error) {
+type SeqReader interface {
+	BinCounts(location *dna.Location) (*SampleBinCounts, error)
+}
+
+func (sdb *SeqDB) ReaderFromId(sampleId string, binWidth int) (SeqReader, error) {
 
 	//const FIND_TRACK_SQL = `SELECT platform, genome, name, reads, stat_mode, url FROM tracks WHERE seq.publicId = ?1`
 
@@ -505,202 +491,11 @@ func (sdb *SeqDB) SampleReader(sampleId string, binWidth int) (*SeqReader, error
 
 	url := filepath.Join(sdb.url, sample.Url)
 
-	return NewSeqReader(sample, url, binWidth)
-}
-
-type SeqReader struct {
-	sample          *Sample
-	url             string
-	binSize         int
-	defaultBinCount int
-	//scale           float64
-}
-
-func NewSeqReader(sample *Sample, url string, binSize int) (*SeqReader, error) {
-
-	return &SeqReader{
-		sample:  sample,
-		url:     url,
-		binSize: binSize,
-
-		// estimate the number of bins to represent a region
-		defaultBinCount: binSize * 4,
-	}, nil
-}
-
-// func (reader *SeqReader) getPath(location *dna.Location) string {
-// 	return filepath.Join(reader.Dir, fmt.Sprintf("bin%d", reader.BinSize), fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
-// }
-
-func (reader *SeqReader) BinCounts(location *dna.Location) (*SampleBinCounts, error) {
-
-	//var startBin uint = (location.Start - 1) / reader.BinSize
-	//var endBin uint = (location.End - 1) / reader.BinSize
-
-	// we return something for every call, even if data not available
-	ret := SampleBinCounts{
-		Id: reader.sample.Id,
-		//Name: reader.sample.Name,
-		//Track:    reader.Track,
-		//Location: location,
-		//Start:    startBin*reader.BinSize + 1,
-		//Chr:     location.Chr,
-		Bins:    make([]*ReadBin, 0, reader.defaultBinCount),
-		YMax:    0,
-		BinSize: reader.binSize,
-		Reads:   reader.sample.Reads,
+	switch sample.Type {
+	case SampleTypeBigWig, SampleTypeLocalBigWig:
+		return NewBigWigReader(sample, url, binWidth)
+	default:
+		return NewDBSeqReader(sample, url, binWidth)
 	}
 
-	// path := filepath.Join(reader.url,
-	// 	fmt.Sprintf("%s.db?mode=ro", location.Chr()))
-
-	path := filepath.Join(reader.url + sys.SqliteDSN)
-
-	//log.Debug().Msgf("track path %s", path)
-
-	db, err := sql.Open(sys.Sqlite3DB, path)
-
-	if err != nil {
-		return &ret, err
-	}
-
-	defer db.Close()
-
-	var bpmReads int
-	//var scaleFactor float64
-
-	err = db.QueryRow(BpmSql, reader.binSize).Scan(&bpmReads) ///endBin)
-
-	if err != nil {
-		log.Debug().Msgf("error scale factor %s %s", path, err)
-		return &ret, err
-	}
-
-	ret.BinReads = bpmReads
-	//ret.BpmScaleFactor = scaleFactor
-
-	//var binSql string
-
-	// switch reader.binSize {
-	// case 16:
-	// 	binSql = BIN_16_SQL
-	// case 64:
-	// 	binSql = BIN_64_SQL
-	// case 256:
-	// 	binSql = BIN_256_SQL
-	// case 1024:
-	// 	binSql = BIN_1024_SQL
-	// case 4096:
-	// 	binSql = BIN_4096_SQL
-	// default:
-	// 	binSql = BIN_16384_SQL
-	// }
-
-	rows, err := db.Query(ReadsSql,
-		sql.Named("chr", location.Chr()),
-		sql.Named("bin", reader.binSize),
-		sql.Named("start", location.Start()), //	startBin,
-		sql.Named("end", location.End()))     ///endBin)
-
-	if err != nil {
-		log.Debug().Msgf("error reading reads %s %s", path, err)
-		return &ret, err
-	}
-
-	for rows.Next() {
-		var bin ReadBin
-		// read the location
-		err := rows.Scan(&bin.Start, &bin.End, &bin.Count)
-
-		if err != nil {
-			return &ret, err //fmt.Errorf("there was an error with the database records")
-		}
-
-		ret.Bins = append(ret.Bins, &bin)
-	}
-
-	for _, bin := range ret.Bins {
-		ret.YMax = basemath.Max(ret.YMax, bin.Count)
-	}
-
-	return &ret, nil
-}
-
-// Creates the IN clause for permissions and appends named args
-// for use in sql query so it can be done in a safe way
-// func MakePermissionsInClause(permissions []string, namedArgs *[]any) string {
-// 	inPlaceholders := make([]string, len(permissions))
-
-// 	for i, perm := range permissions {
-// 		ph := fmt.Sprintf("perm%d", i+1)
-// 		inPlaceholders[i] = ":" + ph
-// 		*namedArgs = append(*namedArgs, sql.Named(ph, perm))
-// 	}
-
-// 	return strings.Join(inPlaceholders, ",")
-// }
-
-func rowsToSample(rows *sql.Rows) (*Sample, error) {
-	var sample Sample
-	var tags string
-
-	err := rows.Scan(&sample.Id,
-		&sample.Genome,
-		&sample.Assembly,
-		&sample.Technology,
-		&sample.Institution,
-		&sample.Dataset,
-		&sample.Name,
-		&sample.Type,
-		&sample.Reads,
-		&sample.Url,
-		&tags)
-
-	if err != nil {
-		return nil, err //fmt.Errorf("there was an error with the database records")
-	}
-
-	sample.Tags = TagsToList(tags)
-
-	return &sample, nil
-}
-
-func rowToSample(rows *sql.Row) (*Sample, error) {
-	var sample Sample
-	var tags string
-
-	err := rows.Scan(&sample.Id,
-		&sample.Genome,
-		&sample.Assembly,
-		&sample.Technology,
-		&sample.Institution,
-		&sample.Dataset,
-		&sample.Name,
-		&sample.Type,
-		&sample.Reads,
-		&sample.Url,
-		&tags)
-
-	if err != nil {
-		return nil, err //fmt.Errorf("there was an error with the database records")
-	}
-
-	sample.Tags = TagsToList(tags)
-
-	return &sample, nil
-}
-
-func TagsToList(tags string) []string {
-	if tags == "" {
-		return []string{}
-	}
-
-	tagList := strings.Split(tags, ",")
-	sort.Strings(tagList)
-	// trim
-	for i, tag := range tagList {
-		tagList[i] = strings.TrimSpace(tag)
-	}
-
-	return tagList
 }

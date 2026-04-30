@@ -4,6 +4,7 @@ Encode read counts per base in 2 bytes
 
 @author: Antony Holmes
 """
+
 import argparse
 import collections
 import math
@@ -111,8 +112,7 @@ for i, row in df_seq_samples.iterrows():
     cursor.execute("PRAGMA journal_mode = WAL;")
     cursor.execute("PRAGMA foreign_keys = ON;")
 
-    cursor.execute(
-        f""" CREATE TABLE sample (
+    cursor.execute(f""" CREATE TABLE sample (
         id INTEGER PRIMARY KEY,
         public_id TEXT NOT NULL UNIQUE,
         institution TEXT NOT NULL,
@@ -124,18 +124,15 @@ for i, row in df_seq_samples.iterrows():
         type TEXT NOT NULL DEFAULT 'Seq',
         reads INTEGER NOT NULL DEFAULT 0,
         url TEXT NOT NULL DEFAULT '');
-    """
-    )
+    """)
 
-    cursor.execute(
-        f"""CREATE TABLE bins (
+    cursor.execute(f"""CREATE TABLE bins (
         id INTEGER PRIMARY KEY,
         public_id TEXT NOT NULL UNIQUE,
         size INTEGER NOT NULL UNIQUE,
         reads INTEGER NOT NULL DEFAULT 0,
         bpm_scale_factor REAL NOT NULL DEFAULT 1.0);
-    """
-    )
+    """)
 
     bin_map = {}
     for bi, size in enumerate(bin_sizes):
@@ -144,16 +141,14 @@ for i, row in df_seq_samples.iterrows():
             f"""INSERT INTO bins (id, public_id, size) VALUES ({bi+1}, '{str(uuid.uuid7())}', {size});"""
         )
 
-    cursor.execute(
-        f"""CREATE TABLE chromosomes (
+    cursor.execute(f"""CREATE TABLE chromosomes (
         id INTEGER PRIMARY KEY,
         public_id TEXT NOT NULL UNIQUE,
         name TEXT NOT NULL UNIQUE);
-        """
-    )
+        """)
 
-    cursor.execute(
-        f"""CREATE TABLE reads (
+    # store raw read counts per bin which can be scaled by bpm_scale_factor
+    cursor.execute(f"""CREATE TABLE reads (
         id INTEGER PRIMARY KEY,
         chr_id INTEGER NOT NULL,
         bin_id INTEGER NOT NULL,
@@ -163,8 +158,7 @@ for i, row in df_seq_samples.iterrows():
         UNIQUE(chr_id, bin_id, start),
         FOREIGN KEY (chr_id) REFERENCES chromosomes(id),
         FOREIGN KEY (bin_id) REFERENCES bins(id) ON DELETE CASCADE);
-    """
-    )
+    """)
 
     reader = libbam.BamReader(bam, paired=paired)
 
@@ -455,8 +449,7 @@ cursor.execute(
 institution_map = {"Columbia": 1}
 
 
-cursor.execute(
-    f""" CREATE TABLE datasets (
+cursor.execute(f""" CREATE TABLE datasets (
 	id INTEGER PRIMARY KEY,
     public_id TEXT NOT NULL UNIQUE,
 	assembly_id INTEGER NOT NULL,
@@ -466,29 +459,24 @@ cursor.execute(
     tags TEXT NOT NULL DEFAULT '',
 	FOREIGN KEY(assembly_id) REFERENCES assemblies(id) ON DELETE CASCADE,
     FOREIGN KEY(institution_id) REFERENCES institutions(id) ON DELETE CASCADE);
-"""
-)
+""")
 cursor.execute(f"CREATE INDEX idx_datasets_name_id ON datasets(LOWER(name));")
 cursor.execute("CREATE INDEX idx_datasets_assembly_id ON datasets(assembly_id);")
 cursor.execute("CREATE INDEX idx_datasets_institution_id ON datasets(institution_id);")
 
-cursor.execute(
-    f""" CREATE TABLE permissions (
+cursor.execute(f""" CREATE TABLE permissions (
 	id INTEGER PRIMARY KEY ASC,
     public_id TEXT NOT NULL UNIQUE,
 	name TEXT NOT NULL);
-"""
-)
+""")
 
-cursor.execute(
-    f"""CREATE TABLE dataset_permissions (
+cursor.execute(f"""CREATE TABLE dataset_permissions (
 	dataset_id INTEGER,
     permission_id INTEGER,
     PRIMARY KEY(dataset_id, permission_id),
     FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
     FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE);
-"""
-)
+""")
 
 cursor.execute(
     f"CREATE INDEX idx_dataset_permissions_dataset_id ON dataset_permissions(dataset_id);"
@@ -504,13 +492,11 @@ cursor.execute(
     f"INSERT INTO permissions (id, public_id, name) VALUES (1, '{rdfViewId}', 'rdf:view');"
 )
 
-cursor.execute(
-    f""" CREATE TABLE sample_types (
+cursor.execute(f""" CREATE TABLE sample_types (
 	id INTEGER PRIMARY KEY ASC,
     public_id TEXT NOT NULL UNIQUE,
 	name TEXT NOT NULL);
-"""
-)
+""")
 
 cursor.execute(
     f"INSERT INTO sample_types (id, public_id, name) VALUES (1, '{uuid.uuid7()}', 'Seq');"
@@ -519,8 +505,7 @@ cursor.execute(
     f"INSERT INTO sample_types (id, public_id, name) VALUES (2, '{uuid.uuid7()}', 'Remote BigWig');"
 )
 
-cursor.execute(
-    f""" CREATE TABLE samples (
+cursor.execute(f""" CREATE TABLE samples (
 	id INTEGER PRIMARY KEY,
     public_id TEXT NOT NULL UNIQUE,
 	technology_id INTEGER NOT NULL,
@@ -536,8 +521,7 @@ cursor.execute(
 	FOREIGN KEY(dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
     FOREIGN KEY(technology_id) REFERENCES technologies(id) ON DELETE CASCADE,
     FOREIGN KEY(type_id) REFERENCES sample_types(id) ON DELETE CASCADE);
-    """
-)
+    """)
 cursor.execute(f"CREATE INDEX idx_samples_name_id ON samples(LOWER(name));")
 cursor.execute(f"CREATE INDEX idx_samples_dataset_id ON samples(dataset_id);")
 cursor.execute(f"CREATE INDEX idx_samples_technology_id ON samples(technology_id);")

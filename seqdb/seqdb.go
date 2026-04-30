@@ -45,8 +45,8 @@ func SearchSamples(query string, assembly string, isAdmin bool, permissions []st
 	return instance.Search(query, assembly, isAdmin, permissions)
 }
 
-func ReaderFromId(sampleId string, binWidth int) (*seqs.SeqReader, error) {
-	return instance.SampleReader(sampleId, binWidth)
+func ReaderFromId(sampleId string, binWidth int) (seqs.SeqReader, error) {
+	return instance.ReaderFromId(sampleId, binWidth)
 }
 
 func CanViewSample(sampleId string, isAdmin bool, permissions []string) error {
