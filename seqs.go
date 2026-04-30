@@ -18,16 +18,16 @@ import (
 
 type (
 	ReadBin struct {
-		Start int `json:"s"`
-		End   int `json:"e"`
-		Count int `json:"c"`
+		Start int     `json:"s"`
+		End   int     `json:"e"`
+		Count float64 `json:"c"`
 	}
 
 	SampleBinCounts struct {
 		Id string `json:"id"`
 		//Name    string     `json:"name"`
 		Bins    []*ReadBin `json:"bins"`
-		YMax    int        `json:"ymax"`
+		YMax    float64    `json:"ymax"`
 		BinSize int        `json:"binSize"`
 		//BpmScaleFactor float64    `json:"bpmScaleFactor"`
 		Reads    int `json:"reads"`
