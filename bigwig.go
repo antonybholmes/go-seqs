@@ -54,6 +54,7 @@ func GetBigWigSummary(file string, location dna.Location, bins int) ([]*ReadBin,
 			}
 			bin.Count = f
 		}
+
 		result[i] = bin
 	}
 
