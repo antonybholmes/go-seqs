@@ -8,6 +8,7 @@ import (
 
 	"github.com/antonybholmes/go-dna"
 	"github.com/antonybholmes/go-sys"
+	"github.com/antonybholmes/go-sys/log"
 	"github.com/antonybholmes/go-web"
 	"github.com/antonybholmes/go-web/auth/sqlite"
 	_ "github.com/mattn/go-sqlite3"
@@ -77,9 +78,9 @@ type (
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
 const (
-	SampleTypeSeq         = "Seq"
-	SampleTypeBigWig      = "Remote BigWig"
-	SampleTypeLocalBigWig = "BigWig"
+	SampleTypeSeq    = "Seq"
+	SampleTypeBigWig = "BigWig"
+	//SampleTypeLocalBigWig = "BigWig"
 
 	// TechnologiesSql = `SELECT DISTINCT
 	// 	d.public_id,
@@ -491,11 +492,13 @@ func (sdb *SeqDB) ReaderFromId(sampleId string, binWidth int) (SeqReader, error)
 
 	url := filepath.Join(sdb.url, sample.Url)
 
+	log.Debug().Msgf("creating reader for sample %s with url %s and type %s", sample.Id, url, sample.Type)
+
 	switch sample.Type {
-	case SampleTypeBigWig, SampleTypeLocalBigWig:
-		return NewBigWigReader(sample, url, binWidth)
+	case SampleTypeBigWig:
+		return NewBigWigReader(sample, binWidth)
 	default:
-		return NewDBSeqReader(sample, url, binWidth)
+		return NewDBSeqReader(sample, filepath.Join(sdb.url, sample.Url), binWidth)
 	}
 
 }

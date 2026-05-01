@@ -63,14 +63,14 @@ print("mode", mode, create_samples, min_reads)
 df_samples = pd.read_csv(samples_file, sep="\t", header=0, keep_default_na=False)
 
 df_seq_samples = df_samples[df_samples["type"] == "Seq"]
-df_remote_bigwig_samples = df_samples[df_samples["type"] == "Remote BigWig"]
+df_remote_bigwig_samples = df_samples[df_samples["type"] == "BigWig"]
 
 # df_samples = df_samples.iloc[0:1, :] # testing with just 1 sample for now
 
 genome_map = {"Human": 1, "Mouse": 2}
 assembly_map = {"hg19": 1, "GRCh38": 2, "GRCm39": 3}
 technology_map = {"ChIP-seq": 1, "RNA-seq": 2, "CUT&RUN": 3}
-type_map = {"Seq": 1, "Remote BigWig": 2}
+type_map = {"Seq": 1, "BigWig": 2}
 
 current_dataset = None
 dataset_map = {}
@@ -502,7 +502,7 @@ cursor.execute(
     f"INSERT INTO sample_types (id, public_id, name) VALUES (1, '{uuid.uuid7()}', 'Seq');"
 )
 cursor.execute(
-    f"INSERT INTO sample_types (id, public_id, name) VALUES (2, '{uuid.uuid7()}', 'Remote BigWig');"
+    f"INSERT INTO sample_types (id, public_id, name) VALUES (2, '{uuid.uuid7()}', 'BigWig');"
 )
 
 cursor.execute(f""" CREATE TABLE samples (
@@ -707,7 +707,7 @@ for i, row in df_remote_bigwig_samples.iterrows():
                     {institution_map[institution]},
                     {dataset["index"]},
                     '{name}',
-                    {type_map["Remote BigWig"]},
+                    {type_map["BigWig"]},
                     -1,
                     '{url}',
                     'scale={scale}');

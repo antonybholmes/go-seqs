@@ -20,11 +20,11 @@ type BigWigSeqReader struct {
 	binSize int
 }
 
-func NewBigWigReader(sample *Sample, url string, binSize int) (SeqReader, error) {
+func NewBigWigReader(sample *Sample, binSize int) (SeqReader, error) {
 
 	return &BigWigSeqReader{
 		sample:  sample,
-		url:     url,
+		url:     sample.Url,
 		binSize: binSize,
 
 		// estimate the number of bins to represent a region
@@ -41,6 +41,8 @@ func (reader *BigWigSeqReader) BinCounts(location *dna.Location) (*SampleBinCoun
 	//var startBin uint = (location.Start - 1) / reader.BinSize
 	//var endBin uint = (location.End - 1) / reader.BinSize
 
+	log.Debug().Msgf("getting bigwig summary for location %s with bin size %d and url %s", location, reader.binSize, reader.url)
+
 	// we return something for every call, even if data not available
 	ret := SampleBinCounts{
 		Id: reader.sample.Id,
@@ -56,7 +58,12 @@ func (reader *BigWigSeqReader) BinCounts(location *dna.Location) (*SampleBinCoun
 		BinReads: -1,
 	}
 
-	readBins, err := GetBigWigSummary(reader.url, location, reader.binSize)
+	loc, err := alignLocToBinSize(location, reader.binSize)
+	if err != nil {
+		return &ret, err
+	}
+
+	readBins, err := GetBigWigSummary(reader.url, loc, reader.binSize)
 
 	if err != nil {
 		log.Debug().Msgf("error reading bigwig summary %s %s", reader.url, err)
@@ -72,10 +79,29 @@ func (reader *BigWigSeqReader) BinCounts(location *dna.Location) (*SampleBinCoun
 	return &ret, nil
 }
 
-func GetBigWigSummary(url string, location *dna.Location, bins int) ([]*ReadBin, error) {
+func alignLocToBinSize(location *dna.Location, binSize int) (*dna.Location, error) {
+	start := (location.Start())/binSize*binSize + 1
+
+	// align end to be a multiple of bin size
+	end := ((location.End()-1)/binSize + 1) * binSize
+
+	loc, err := dna.NewLocation(location.Chr(), start, end)
+
+	if err != nil {
+		log.Debug().Msgf("error aligning location to bin size: %s", err)
+		return nil, err
+	}
+
+	return loc, nil
+}
+
+func GetBigWigSummary(url string, location *dna.Location, binSize int) ([]*ReadBin, error) {
 	start0 := location.Start() - 1
 
-	log.Debug().Msgf("running bigwig summary %s %s:%d-%d bins %d", url, location.Chr(), location.Start(), location.End(), bins)
+	// bigWigSummary returns a number of bins, so we must calculate the number of bins to return based on the location length and bin size
+	bins := location.Len() / binSize
+
+	log.Debug().Msgf("getting bigwig summary for location %s with bin size %d and url %s, calculated bins %d", location, binSize, url, bins)
 
 	cmd := exec.Command(
 		BigWigSummaryCmd,
@@ -94,18 +120,16 @@ func GetBigWigSummary(url string, location *dna.Location, bins int) ([]*ReadBin,
 
 	values := strings.Fields(string(out))
 	result := make([]*ReadBin, len(values))
-
-	binSize := (location.Len()) / bins
-
-	binStart := location.Start()
+	start := location.Start()
+	binEndWidth := binSize - 1
 
 	for i, v := range values {
 		bin := &ReadBin{
-			Start: binStart,
-			End:   binStart + binSize - 1,
+			Start: start,
+			End:   start + binEndWidth,
 		}
 
-		binStart += binSize
+		start += binSize
 
 		if v == "nan" {
 			bin.Count = 0
