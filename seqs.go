@@ -8,7 +8,6 @@ import (
 
 	"github.com/antonybholmes/go-dna"
 	"github.com/antonybholmes/go-sys"
-	"github.com/antonybholmes/go-sys/log"
 	"github.com/antonybholmes/go-web"
 	"github.com/antonybholmes/go-web/auth/sqlite"
 	_ "github.com/mattn/go-sqlite3"
@@ -28,11 +27,11 @@ type (
 		YMax    float64    `json:"ymax"`
 		BinSize int        `json:"binSize"`
 		//BpmScaleFactor float64    `json:"bpmScaleFactor"`
-		Reads int `json:"reads"`
+		//Reads int `json:"reads,"`
 
 		// sum of all reads falling in all bins, which
 		// can be higher than total reads in sample if some reads fall in multiple bins
-		BinReads int `json:"binReads"`
+		BinReads int `json:"binReads,omitempty"`
 	}
 
 	Platform struct {
@@ -52,17 +51,22 @@ type (
 	}
 
 	Sample struct {
-		Id          string   `json:"id"`
-		Genome      string   `json:"genome"`
-		Assembly    string   `json:"assembly"`
-		Technology  string   `json:"technology"`
-		Institution string   `json:"institution"`
-		Dataset     string   `json:"dataset"`
-		Name        string   `json:"name"`
-		Type        string   `json:"type"`
-		Url         string   `json:"url"`
-		Tags        []string `json:"tags"`
-		Reads       int      `json:"reads"`
+		Id          string `json:"id"`
+		Genome      string `json:"genome"`
+		Assembly    string `json:"assembly"`
+		Technology  string `json:"technology"`
+		Institution string `json:"institution"`
+		Dataset     string `json:"dataset"`
+		Name        string `json:"name"`
+		Type        string `json:"type"`
+		// Url is the internal url/path to the sample data, which may not be accessible to the client
+		Url string `json:"-"`
+		// PublicUrl is the url that clients can use to access the sample data,
+		// which may be the same as Url or may be a different url that proxies to Url. This is for
+		// public bigwig files etc that
+		PublicUrl string   `json:"url,omitempty"`
+		Tags      []string `json:"tags"`
+		Reads     int      `json:"reads,omitempty"`
 	}
 
 	SeqDB struct {
@@ -78,8 +82,10 @@ type (
 // const BINS_OFFSET_BYTES = N_BINS_OFFSET_BYTES + 4
 
 const (
-	SampleTypeSeq    = "Seq"
-	SampleTypeBigWig = "BigWig"
+	SampleTypeSeq          = "Seq"
+	SampleTypeBigWig       = "BigWig"
+	SampleTypeRemoteBigWig = "RemoteBigWig"
+
 	//SampleTypeLocalBigWig = "BigWig"
 
 	// TechnologiesSql = `SELECT DISTINCT
@@ -162,7 +168,8 @@ const (
 		s.name AS sample_name,
 		st.name AS sample_type, 
 		s.reads,
-		s.url, 
+		s.url,
+		s.public_url, 
 		s.tags
 		FROM samples s
 		JOIN datasets d ON s.dataset_id = d.id
@@ -211,12 +218,15 @@ func (sdb *SeqDB) Dir() string {
 	return sdb.url
 }
 
-func NewSeqDB(url string) *SeqDB {
-	db := sys.Must(sql.Open(sys.Sqlite3DB, filepath.Join(url, "seqs.db"+sys.SqliteDSN)))
+func NewSeqDB(dbpath string) *SeqDB {
+	db := sys.Must(sql.Open(sys.Sqlite3DB, dbpath+sys.SqliteDSN))
+
+	// folder of db
+	path := filepath.Dir(dbpath)
 
 	//x := sys.Must(db.Prepare(ALL_TRACKS_SQL))
 
-	return &SeqDB{url: url, db: db}
+	return &SeqDB{url: path, db: db}
 }
 
 func (sdb *SeqDB) Close() error {
@@ -490,9 +500,9 @@ func (sdb *SeqDB) ReaderFromId(sampleId string, binWidth int) (SeqReader, error)
 		return nil, err
 	}
 
-	url := filepath.Join(sdb.url, sample.Url)
+	//url := filepath.Join(sdb.url, sample.Url)
 
-	log.Debug().Msgf("creating reader for sample %s with url %s and type %s", sample.Id, url, sample.Type)
+	//log.Debug().Msgf("creating reader for sample %s with url %s and type %s", sample.Id, sample.Type)
 
 	switch sample.Type {
 	case SampleTypeBigWig:

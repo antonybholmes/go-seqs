@@ -69,7 +69,7 @@ func (reader *DBSeqReader) BinCounts(location *dna.Location) (*SampleBinCounts, 
 		Bins:    make([]*ReadBin, 0, reader.binSize),
 		YMax:    0,
 		BinSize: reader.binSize,
-		Reads:   reader.sample.Reads,
+		//Reads:   reader.sample.Reads,
 	}
 
 	// path := filepath.Join(reader.url,
@@ -175,6 +175,7 @@ func rowsToSample(rows *sql.Rows) (*Sample, error) {
 		&sample.Type,
 		&sample.Reads,
 		&sample.Url,
+		&sample.PublicUrl,
 		&tags)
 
 	if err != nil {
@@ -200,6 +201,7 @@ func rowToSample(rows *sql.Row) (*Sample, error) {
 		&sample.Type,
 		&sample.Reads,
 		&sample.Url,
+		&sample.PublicUrl,
 		&tags)
 
 	if err != nil {

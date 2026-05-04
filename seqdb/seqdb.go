@@ -9,9 +9,9 @@ import (
 var instance *seqs.SeqDB
 var once sync.Once
 
-func InitSeqDB(dir string) *seqs.SeqDB {
+func InitSeqDB(path string) *seqs.SeqDB {
 	once.Do(func() {
-		instance = seqs.NewSeqDB(dir)
+		instance = seqs.NewSeqDB(path)
 	})
 
 	return instance

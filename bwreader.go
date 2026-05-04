@@ -10,15 +10,15 @@ import (
 	"github.com/antonybholmes/go-sys/log"
 )
 
-const (
-	BigWigSummaryCmd = "bin/bigWigSummary"
-)
-
 type BigWigSeqReader struct {
 	sample  *Sample
 	url     string
 	binSize int
 }
+
+const (
+	BigWigSummaryCmd = "bin/bigWigSummary"
+)
 
 func NewBigWigReader(sample *Sample, binSize int) (SeqReader, error) {
 
@@ -32,38 +32,19 @@ func NewBigWigReader(sample *Sample, binSize int) (SeqReader, error) {
 	}, nil
 }
 
-// func (reader *SeqReader) getPath(location *dna.Location) string {
-// 	return filepath.Join(reader.Dir, fmt.Sprintf("bin%d", reader.BinSize), fmt.Sprintf("%s_bin%d_%s.db?mode=ro", location.Chr, reader.BinSize, reader.Track.Genome))
-// }
-
 func (reader *BigWigSeqReader) BinCounts(location *dna.Location) (*SampleBinCounts, error) {
-
-	//var startBin uint = (location.Start - 1) / reader.BinSize
-	//var endBin uint = (location.End - 1) / reader.BinSize
 
 	log.Debug().Msgf("getting bigwig summary for location %s with bin size %d and url %s", location, reader.binSize, reader.url)
 
 	// we return something for every call, even if data not available
 	ret := SampleBinCounts{
-		Id: reader.sample.Id,
-		//Name: reader.sample.Name,
-		//Track:    reader.Track,
-		//Location: location,
-		//Start:    startBin*reader.BinSize + 1,
-		//Chr:     location.Chr,
-		Bins:     make([]*ReadBin, 0, reader.binSize),
-		YMax:     0,
-		BinSize:  reader.binSize,
-		Reads:    -1,
-		BinReads: -1,
+		Id:      reader.sample.Id,
+		Bins:    make([]*ReadBin, 0, reader.binSize),
+		YMax:    0,
+		BinSize: reader.binSize,
 	}
 
-	loc, err := alignLocToBinSize(location, reader.binSize)
-	if err != nil {
-		return &ret, err
-	}
-
-	readBins, err := GetBigWigSummary(reader.url, loc, reader.binSize)
+	readBins, err := getBigWigSummary(reader.url, location, reader.binSize)
 
 	if err != nil {
 		log.Debug().Msgf("error reading bigwig summary %s %s", reader.url, err)
@@ -79,6 +60,9 @@ func (reader *BigWigSeqReader) BinCounts(location *dna.Location) (*SampleBinCoun
 	return &ret, nil
 }
 
+// Return a location aligned to the bin size, so that the start is a multiple of the bin size
+// and the end is a multiple of the bin size. This is necessary because bigwig summary
+// requires locations to be aligned to the bin size.
 func alignLocToBinSize(location *dna.Location, binSize int) (*dna.Location, error) {
 	start := (location.Start())/binSize*binSize + 1
 
@@ -95,20 +79,31 @@ func alignLocToBinSize(location *dna.Location, binSize int) (*dna.Location, erro
 	return loc, nil
 }
 
-func GetBigWigSummary(url string, location *dna.Location, binSize int) ([]*ReadBin, error) {
-	start0 := location.Start() - 1
+func getBigWigSummary(url string, location *dna.Location, binSize int) ([]*ReadBin, error) {
+	// ensure aligned to bin size by aligning start and end to the nearest multiple of bin size
+	// for example, if bin size is 1000, and location is chr1:1500-2500, we would align to chr1:1000-3000
+	// if location is chr1:500-1500, we would align to chr1:0-2000
+	locBinSizeAligned, err := alignLocToBinSize(location, binSize)
+
+	if err != nil {
+		return nil, err
+	}
+
+	//log.Debug().Msgf("location %s aligned to %s", location, locBinSizeAligned)
+
+	start0 := locBinSizeAligned.Start() - 1
 
 	// bigWigSummary returns a number of bins, so we must calculate the number of bins to return based on the location length and bin size
-	bins := location.Len() / binSize
+	bins := locBinSizeAligned.Len() / binSize
 
-	log.Debug().Msgf("getting bigwig summary for location %s with bin size %d and url %s, calculated bins %d", location, binSize, url, bins)
+	//log.Debug().Msgf("getting bigwig summary for location %s with bin size %d and url %s, calculated bins %d", locBinSizeAligned, binSize, url, bins)
 
 	cmd := exec.Command(
 		BigWigSummaryCmd,
 		url,
-		location.Chr(),
+		locBinSizeAligned.Chr(),
 		strconv.Itoa(start0),
-		strconv.Itoa(location.End()),
+		strconv.Itoa(locBinSizeAligned.End()),
 		strconv.Itoa(bins),
 	)
 
@@ -120,7 +115,7 @@ func GetBigWigSummary(url string, location *dna.Location, binSize int) ([]*ReadB
 
 	values := strings.Fields(string(out))
 	result := make([]*ReadBin, len(values))
-	start := location.Start()
+	start := locBinSizeAligned.Start()
 	binEndWidth := binSize - 1
 
 	for i, v := range values {

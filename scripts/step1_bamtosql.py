@@ -26,7 +26,8 @@ rdfViewId = str(uuid.uuid7())
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-w", "--widths", default="50,100,1000,10000", help="size of bin")
-parser.add_argument("-o", "--out", default=DIR, help="output directory")
+parser.add_argument("-d", "--dir", default=DIR, help="output directory")
+parser.add_argument("--seqdb", default="seqs.db", help="output sql db for seqs")
 parser.add_argument(
     "--samples",
     default="samples.tsv",
@@ -51,7 +52,8 @@ args = parser.parse_args()
 
 
 bin_sizes = [int(w) for w in args.widths.split(",")]
-outdir = args.out
+outdir = args.dir
+seqdb = args.seqdb
 samples_file = args.samples
 create_samples = not args.no_create_samples
 mode = args.mode
@@ -70,7 +72,7 @@ df_remote_bigwig_samples = df_samples[df_samples["type"] == "BigWig"]
 genome_map = {"Human": 1, "Mouse": 2}
 assembly_map = {"hg19": 1, "GRCh38": 2, "GRCm39": 3}
 technology_map = {"ChIP-seq": 1, "RNA-seq": 2, "CUT&RUN": 3}
-type_map = {"Seq": 1, "BigWig": 2}
+type_map = {"Seq": 1, "BigWig": 2, "RemoteBigWig": 3}
 
 current_dataset = None
 dataset_map = {}
@@ -123,7 +125,8 @@ for i, row in df_seq_samples.iterrows():
         name TEXT NOT NULL UNIQUE,
         type TEXT NOT NULL DEFAULT 'Seq',
         reads INTEGER NOT NULL DEFAULT 0,
-        url TEXT NOT NULL DEFAULT '');
+        url TEXT NOT NULL DEFAULT '',
+        public_url TEXT NOT NULL DEFAULT '');
     """)
 
     cursor.execute(f"""CREATE TABLE bins (
@@ -351,7 +354,7 @@ for i, row in df_seq_samples.iterrows():
 # writer.write_all_chr_sql()
 
 
-db = os.path.join(outdir, "seqs.db")
+db = os.path.join(outdir, seqdb)
 
 
 print("dataset map", db)
@@ -505,6 +508,10 @@ cursor.execute(
     f"INSERT INTO sample_types (id, public_id, name) VALUES (2, '{uuid.uuid7()}', 'BigWig');"
 )
 
+cursor.execute(
+    f"INSERT INTO sample_types (id, public_id, name) VALUES (3, '{uuid.uuid7()}', 'RemoteBigWig');"
+)
+
 cursor.execute(f""" CREATE TABLE samples (
 	id INTEGER PRIMARY KEY,
     public_id TEXT NOT NULL UNIQUE,
@@ -515,6 +522,7 @@ cursor.execute(f""" CREATE TABLE samples (
     type_id INTEGER NOT NULL,
     reads INTEGER NOT NULL DEFAULT 0,
     url TEXT NOT NULL DEFAULT '',
+    public_url TEXT NOT NULL DEFAULT '',
     description TEXT NOT NULL DEFAULT '',
     tags TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(institution_id) REFERENCES institutions(id) ON DELETE CASCADE,
@@ -528,13 +536,16 @@ cursor.execute(f"CREATE INDEX idx_samples_technology_id ON samples(technology_id
 cursor.execute(f"CREATE INDEX idx_samples_type_id ON samples(type_id);")
 cursor.execute(f"CREATE INDEX idx_samples_institution_id ON samples(institution_id);")
 
-
+print(outdir)
 for root, dirs, files in os.walk(outdir):
     if "trash" in root:
         continue
 
     for filename in files:
         if filename == "seqs.db":
+            continue
+
+        if filename == seqdb:
             continue
 
         if filename == "samples.db":
@@ -547,6 +558,8 @@ for root, dirs, files in os.walk(outdir):
             continue
 
         relative_dir = root.replace(outdir, "")[1:]
+
+        print("d:", root, relative_dir, filename)
 
         assembly, technology, institution, dataset_name = relative_dir.split("/")
 
@@ -701,14 +714,13 @@ for i, row in df_remote_bigwig_samples.iterrows():
 
                 id = str(uuid.uuid7())
                 cursor.execute(
-                    f"""INSERT INTO samples (public_id, technology_id, institution_id, dataset_id, name, type_id, reads, url, tags) VALUES (
+                    f"""INSERT INTO samples (public_id, technology_id, institution_id, dataset_id, name, type_id, url, tags) VALUES (
                     '{id}',
                     {technology_map[technology]},
                     {institution_map[institution]},
                     {dataset["index"]},
                     '{name}',
                     {type_map["BigWig"]},
-                    -1,
                     '{url}',
                     'scale={scale}');
                 """,
