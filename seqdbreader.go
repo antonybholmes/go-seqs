@@ -2,9 +2,9 @@ package seqs
 
 import (
 	"database/sql"
+	"encoding/json"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	basemath "github.com/antonybholmes/go-basemath"
 	"github.com/antonybholmes/go-dna"
@@ -163,7 +163,8 @@ func (reader *DBSeqReader) BinCounts(location *dna.Location) (*SampleBinCounts, 
 
 func rowsToSample(rows *sql.Rows) (*Sample, error) {
 	var sample Sample
-	var tags string
+
+	var tagData []byte
 
 	err := rows.Scan(&sample.Id,
 		&sample.Genome,
@@ -176,20 +177,25 @@ func rowsToSample(rows *sql.Rows) (*Sample, error) {
 		&sample.Reads,
 		&sample.Url,
 		&sample.PublicUrl,
-		&tags)
+		&tagData)
 
 	if err != nil {
 		return nil, err //fmt.Errorf("there was an error with the database records")
 	}
 
-	sample.Tags = TagsToList(tags)
+	tags, err := TagsToList(tagData)
+
+	if err != nil {
+		return nil, err
+	}
+	sample.Tags = tags
 
 	return &sample, nil
 }
 
 func rowToSample(rows *sql.Row) (*Sample, error) {
 	var sample Sample
-	var tags string
+	var tagData []byte
 
 	err := rows.Scan(&sample.Id,
 		&sample.Genome,
@@ -202,28 +208,39 @@ func rowToSample(rows *sql.Row) (*Sample, error) {
 		&sample.Reads,
 		&sample.Url,
 		&sample.PublicUrl,
-		&tags)
+		&tagData)
 
 	if err != nil {
 		return nil, err //fmt.Errorf("there was an error with the database records")
 	}
 
-	sample.Tags = TagsToList(tags)
+	tags, err := TagsToList(tagData)
+
+	if err != nil {
+		return nil, err
+	}
+
+	sample.Tags = tags
 
 	return &sample, nil
 }
 
-func TagsToList(tags string) []string {
-	if tags == "" {
-		return []string{}
+func TagsToList(data []byte) ([]Tag, error) {
+	if len(data) == 0 {
+		return []Tag{}, nil
 	}
 
-	tagList := strings.Split(tags, ",")
-	sort.Strings(tagList)
-	// trim
-	for i, tag := range tagList {
-		tagList[i] = strings.TrimSpace(tag)
+	var tags []Tag
+	err := json.Unmarshal(data, &tags)
+	if err != nil {
+		log.Debug().Msgf("error unmarshalling tags: %s", err)
+		return []Tag{}, err
 	}
 
-	return tagList
+	// sort tags by name
+	sort.Slice(tags, func(i, j int) bool {
+		return tags[i].Name < tags[j].Name
+	})
+
+	return tags, nil
 }

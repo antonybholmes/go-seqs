@@ -7,6 +7,7 @@ Encode read counts per base in 2 bytes
 
 import argparse
 import collections
+import json
 import math
 import os
 import re
@@ -126,7 +127,8 @@ for i, row in df_seq_samples.iterrows():
         type TEXT NOT NULL DEFAULT 'Seq',
         reads INTEGER NOT NULL DEFAULT 0,
         url TEXT NOT NULL DEFAULT '',
-        public_url TEXT NOT NULL DEFAULT '');
+        public_url TEXT NOT NULL DEFAULT '',
+        tags BLOB NOT NULL DEFAULT (jsonb('[]')));
     """)
 
     cursor.execute(f"""CREATE TABLE bins (
@@ -524,7 +526,7 @@ cursor.execute(f""" CREATE TABLE samples (
     url TEXT NOT NULL DEFAULT '',
     public_url TEXT NOT NULL DEFAULT '',
     description TEXT NOT NULL DEFAULT '',
-    tags TEXT NOT NULL DEFAULT '',
+    tags BLOB NOT NULL DEFAULT (jsonb('[]')),
     FOREIGN KEY(institution_id) REFERENCES institutions(id) ON DELETE CASCADE,
 	FOREIGN KEY(dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
     FOREIGN KEY(technology_id) REFERENCES technologies(id) ON DELETE CASCADE,
@@ -713,6 +715,9 @@ for i, row in df_remote_bigwig_samples.iterrows():
                     continue
 
                 id = str(uuid.uuid7())
+
+                tags = [{"name": "scale", "value": scale}]
+
                 cursor.execute(
                     f"""INSERT INTO samples (public_id, technology_id, institution_id, dataset_id, name, type_id, url, tags) VALUES (
                     '{id}',
@@ -722,7 +727,7 @@ for i, row in df_remote_bigwig_samples.iterrows():
                     '{name}',
                     {type_map["BigWig"]},
                     '{url}',
-                    'scale={scale}');
+                    jsonb('{json.dumps(tags)}'));
                 """,
                 )
 

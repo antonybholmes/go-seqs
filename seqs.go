@@ -50,6 +50,11 @@ type (
 		Samples     []*Sample `json:"samples"`
 	}
 
+	Tag struct {
+		Name  string `json:"name"`
+		Value string `json:"value"`
+	}
+
 	Sample struct {
 		Id          string `json:"id"`
 		Genome      string `json:"genome"`
@@ -64,9 +69,9 @@ type (
 		// PublicUrl is the url that clients can use to access the sample data,
 		// which may be the same as Url or may be a different url that proxies to Url. This is for
 		// public bigwig files etc that
-		PublicUrl string   `json:"url,omitempty"`
-		Tags      []string `json:"tags"`
-		Reads     int      `json:"reads,omitempty"`
+		PublicUrl string `json:"url,omitempty"`
+		Tags      []Tag  `json:"tags"`
+		Reads     int    `json:"reads,omitempty"`
 	}
 
 	SeqDB struct {
@@ -170,7 +175,7 @@ const (
 		s.reads,
 		s.url,
 		s.public_url, 
-		s.tags
+		json(s.tags) AS tags
 		FROM samples s
 		JOIN datasets d ON s.dataset_id = d.id
 		JOIN institutions ins ON d.institution_id = ins.id
