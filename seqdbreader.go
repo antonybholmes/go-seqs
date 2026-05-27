@@ -8,7 +8,7 @@ import (
 
 	basemath "github.com/antonybholmes/go-basemath"
 	"github.com/antonybholmes/go-dna"
-	"github.com/antonybholmes/go-sys"
+	"github.com/antonybholmes/go-sys/db"
 	"github.com/antonybholmes/go-sys/log"
 )
 
@@ -75,11 +75,11 @@ func (reader *DBSeqReader) BinCounts(location *dna.Location) (*SampleBinCounts, 
 	// path := filepath.Join(reader.url,
 	// 	fmt.Sprintf("%s.db?mode=ro", location.Chr()))
 
-	path := filepath.Join(reader.url + sys.SqliteDSN)
+	path := filepath.Join(reader.url + db.SqliteDSN)
 
 	//log.Debug().Msgf("track path %s", path)
 
-	db, err := sql.Open(sys.Sqlite3DB, path)
+	db, err := sql.Open(db.Sqlite3DB, path)
 
 	if err != nil {
 		return &ret, err

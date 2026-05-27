@@ -8,6 +8,7 @@ import (
 
 	"github.com/antonybholmes/go-dna"
 	"github.com/antonybholmes/go-sys"
+	"github.com/antonybholmes/go-sys/db"
 	"github.com/antonybholmes/go-web"
 	"github.com/antonybholmes/go-web/auth/sqlite"
 	_ "github.com/mattn/go-sqlite3"
@@ -224,7 +225,7 @@ func (sdb *SeqDB) Dir() string {
 }
 
 func NewSeqDB(dbpath string) *SeqDB {
-	db := sys.Must(sql.Open(sys.Sqlite3DB, dbpath+sys.SqliteDSN))
+	db := sys.Must(sql.Open(db.Sqlite3DB, dbpath+db.SqliteDSN))
 
 	// folder of db
 	path := filepath.Dir(dbpath)
