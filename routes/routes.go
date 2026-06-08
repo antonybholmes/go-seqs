@@ -2,6 +2,7 @@ package routes
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/antonybholmes/go-dna"
 	seq "github.com/antonybholmes/go-seqs"
@@ -126,6 +127,15 @@ func SearchSamplesRoute(c *gin.Context) {
 			web.BadReqResp(c, ErrNoGenomeSupplied)
 			return
 		}
+
+		// normalize assembly names to be more flexible
+		assembly = strings.ToLower(assembly)
+
+		if assembly == "grch37" {
+			assembly = "hg19"
+		}
+
+		log.Debug().Msgf("searching for %s in %s", c.Query("q"), assembly)
 
 		query := c.Query("q")
 
