@@ -11,8 +11,8 @@ replace github.com/antonybholmes/go-basemath => ../go-basemath
 replace github.com/antonybholmes/go-web => ../go-web
 
 require (
-	github.com/antonybholmes/go-basemath v0.0.0-20260422134522-9e8f9f5650da
-	github.com/antonybholmes/go-sys v0.0.0-20260430223651-c5b58e98c9c6
+	github.com/antonybholmes/go-basemath v0.0.0-20260603221554-d647819bbf21
+	github.com/antonybholmes/go-sys v0.0.0-20260609172735-8ea2a7623e43
 	github.com/gin-gonic/gin v1.12.0
 	github.com/mattn/go-sqlite3 v1.14.45
 )
@@ -62,11 +62,11 @@ require (
 	github.com/xuri/excelize/v2 v2.10.1 // indirect
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 	github.com/xyproto/randomstring v1.2.0 // indirect
-	go.mongodb.org/mongo-driver/v2 v2.6.0 // indirect
+	go.mongodb.org/mongo-driver/v2 v2.6.1 // indirect
 	golang.org/x/arch v0.28.0 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/exp v0.0.0-20260603202125-055de637280b // indirect
-	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
+	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
@@ -74,8 +74,8 @@ require (
 )
 
 require (
-	github.com/antonybholmes/go-dna v0.0.0-20260504225438-ff2041d4d052
-	github.com/antonybholmes/go-web v0.0.0-20260507192747-220468103979
+	github.com/antonybholmes/go-dna v0.0.0-20260609172726-29dc92f0e3bf
+	github.com/antonybholmes/go-web v0.0.0-20260609172727-db410cd5d5a1
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	golang.org/x/sys v0.46.0 // indirect
