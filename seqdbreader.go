@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"sort"
 
-	basemath "github.com/antonybholmes/go-basemath"
 	"github.com/antonybholmes/go-dna"
 	"github.com/antonybholmes/go-sys/db"
 	"github.com/antonybholmes/go-sys/log"
+	basemath "github.com/antonybholmes/go-sys/math"
 )
 
 const (

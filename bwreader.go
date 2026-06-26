@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	basemath "github.com/antonybholmes/go-basemath"
 	"github.com/antonybholmes/go-dna"
 	"github.com/antonybholmes/go-sys/log"
+	basemath "github.com/antonybholmes/go-sys/math"
 )
 
 type BigWigSeqReader struct {
