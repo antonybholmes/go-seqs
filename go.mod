@@ -2,12 +2,12 @@ module github.com/antonybholmes/go-seqs
 
 go 1.26
 
-// replace github.com/antonybholmes/go-dna => ../go-dna
+replace github.com/antonybholmes/go-dna => ../go-dna
 
-// replace github.com/antonybholmes/go-sys => ../go-sys
+replace github.com/antonybholmes/go-sys => ../go-sys
 
  
-// replace github.com/antonybholmes/go-web => ../go-web
+replace github.com/antonybholmes/go-web => ../go-web
 
 require (
 	github.com/antonybholmes/go-sys v0.0.0-20260616152946-01b9b0d3a79b
