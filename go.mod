@@ -6,11 +6,10 @@ replace github.com/antonybholmes/go-dna => ../go-dna
 
 replace github.com/antonybholmes/go-sys => ../go-sys
 
- 
 replace github.com/antonybholmes/go-web => ../go-web
 
 require (
-	github.com/antonybholmes/go-sys v0.0.0-20260616152946-01b9b0d3a79b
+	github.com/antonybholmes/go-sys v0.0.0-20260626223512-c00680dc89c9
 	github.com/gin-gonic/gin v1.12.0
 	github.com/mattn/go-sqlite3 v1.14.47
 )
@@ -41,7 +40,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/matoous/go-nanoid/v2 v2.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -72,8 +71,8 @@ require (
 )
 
 require (
-	github.com/antonybholmes/go-dna v0.0.0-20260616153957-a933275aa84a
-	github.com/antonybholmes/go-web v0.0.0-20260616152938-8bbbbc57a69d
+	github.com/antonybholmes/go-dna v0.0.0-20260626225402-9ef356963561
+	github.com/antonybholmes/go-web v0.0.0-20260626225404-033f1116d5b3
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	golang.org/x/sys v0.46.0 // indirect
