@@ -139,7 +139,7 @@ func SearchSamplesRoute(c *gin.Context) {
 
 		query := c.Query("q")
 
-		tracks, err := seqdb.SearchSamples(query, assembly, isAdmin, user.Permissions)
+		tracks, err := seqdb.Instance().Search(query, assembly, isAdmin, user.Permissions)
 
 		if err != nil {
 			c.Error(err)
@@ -168,14 +168,14 @@ func BinsRoute(c *gin.Context) {
 			resp := SeqResp{Location: location, Samples: make([]*seq.SampleBinCounts, 0, len(params.Samples))}
 
 			for _, sample := range params.Samples {
-				err := seqdb.CanViewSample(sample, isAdmin, user.Permissions)
+				err := seqdb.Instance().CanViewSample(sample, isAdmin, user.Permissions)
 
 				if err != nil {
 					log.Debug().Msgf("no permission for sample %s: %s", sample, err)
 					continue
 				}
 
-				reader, err := seqdb.ReaderFromId(sample, params.BinSizes[li])
+				reader, err := seqdb.Instance().ReaderFromId(sample, params.BinSizes[li])
 
 				if err != nil {
 					log.Debug().Msgf("getting bins for %s %v", sample, err)
